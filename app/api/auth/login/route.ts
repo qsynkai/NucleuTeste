@@ -1,4 +1,3 @@
-import "@/lib/env";
 import {
   createSessionToken,
   getSessionCookieName,

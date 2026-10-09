@@ -1,10 +1,10 @@
-import { env } from "@/lib/env";
+import { getServerEnv } from "@/lib/env";
 import OpenAI from "openai";
 
 let client: OpenAI | null = null;
 
 export function getOpenAIClient(): OpenAI {
-  const apiKey = env.OPENAI_API_KEY.trim();
+  const apiKey = getServerEnv().OPENAI_API_KEY.trim();
   if (!apiKey || apiKey === "sk-..." || apiKey.startsWith("sk-...")) {
     throw new Error(
       "OPENAI_API_KEY não configurada. Defina uma chave válida no .env para usar a IA.",

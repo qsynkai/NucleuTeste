@@ -1,4 +1,3 @@
-import "@/lib/env";
 import { isDatabaseUnavailable } from "@/lib/prisma/is-database-unavailable";
 import { PrismaClient } from "@prisma/client";
 

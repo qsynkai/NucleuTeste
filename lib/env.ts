@@ -52,4 +52,10 @@ export function validateServerEnv(): ServerEnv {
   return parsed.data;
 }
 
-export const env = validateServerEnv();
+let cachedEnv: ServerEnv | undefined;
+
+/** Validação sob demanda — evita falha no `next build` sem secrets no CI. */
+export function getServerEnv(): ServerEnv {
+  cachedEnv ??= validateServerEnv();
+  return cachedEnv;
+}
