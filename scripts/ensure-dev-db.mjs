@@ -1,8 +1,15 @@
 import { execSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+
+const envText = readFileSync(join(root, ".env"), "utf8");
+if (/^DATABASE_URL=.*supabase\.co/m.test(envText)) {
+  console.log("DATABASE_URL aponta para o Supabase. Banco local não será iniciado.");
+  process.exit(0);
+}
 
 function lsOutput() {
   return execSync("npx prisma dev ls", {

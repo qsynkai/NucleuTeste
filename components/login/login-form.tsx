@@ -71,17 +71,17 @@ export function LoginForm() {
         aria-labelledby={titleId}
       >
         <label className="field" htmlFor={emailId}>
-          <span className="field__label">E-mail</span>
+          <span className="field__label">Login</span>
           <input
             ref={emailRef}
             id={emailId}
-            type="email"
-            autoComplete="email"
+            type="text"
+            autoComplete="username"
             required
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             className="field__input"
-            placeholder="voce@empresa.com"
+            placeholder="admin"
           />
         </label>
 
@@ -109,6 +109,8 @@ export function LoginForm() {
       </form>
 
       <p className="login-card__demo">
+        Admin: <code>admin</code> / <code>0000</code>
+        <br />
         Demo: <code>{SEED_DEMO_EMAIL}</code> / <code>SenhaTeste123!</code>
       </p>
     </div>

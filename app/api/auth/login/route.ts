@@ -28,7 +28,7 @@ export async function POST(request: Request) {
 
   if (!email || !password) {
     return NextResponse.json(
-      { error: "Informe e-mail e senha." },
+      { error: "Informe login e senha." },
       { status: 400 },
     );
   }
