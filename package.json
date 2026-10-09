@@ -1,0 +1,63 @@
+{
+  "name": "nucleu-omnis-agenda",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "predev": "node scripts/ensure-dev-db.mjs",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:migrate:deploy": "prisma migrate deploy",
+    "db:migrate:baseline": "prisma migrate resolve --applied 20261009000000_init",
+    "db:push": "prisma db push",
+    "db:seed": "prisma db seed",
+    "db:preview": "prisma db seed",
+    "db:studio": "prisma studio",
+    "db:local:up": "docker compose up -d",
+    "db:local:down": "docker compose down",
+    "db:dev:up": "prisma dev -d -n nucleu-omnis-agenda && node scripts/sync-prisma-dev-env.mjs && node scripts/ensure-local-db.mjs",
+    "db:dev:down": "prisma dev stop nucleu-omnis-agenda",
+    "db:setup": "npm run db:migrate:deploy && npm run db:seed",
+    "test": "tsx --test \"lib/**/*.test.ts\""
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@fullcalendar/core": "^6.1.21",
+    "@fullcalendar/daygrid": "^6.1.21",
+    "@fullcalendar/interaction": "^6.1.21",
+    "@fullcalendar/list": "^6.1.21",
+    "@fullcalendar/react": "^6.1.21",
+    "@fullcalendar/timegrid": "^6.1.21",
+    "@prisma/client": "^6.16.0",
+    "bcryptjs": "^3.0.2",
+    "jose": "^6.2.12",
+    "next": "^15.5.4",
+    "openai": "^7.31.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "server-only": "^0.0.1",
+    "sonner": "^2.0.8",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^22.18.0",
+    "@types/react": "^19.1.13",
+    "@types/react-dom": "^19.1.9",
+    "eslint": "^9.36.0",
+    "eslint-config-next": "^15.5.4",
+    "postcss": "^8.5.29",
+    "pg": "^8.16.3",
+    "prisma": "^6.16.0",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
+  }
+}
