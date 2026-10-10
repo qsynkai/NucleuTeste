@@ -1,7 +1,6 @@
 "use client";
 
 import { usePointerGlow } from "@/hooks/use-pointer-glow";
-import { SEED_DEMO_EMAIL } from "@/lib/constants/brand";
 import { notifyError, notifySuccess } from "@/lib/notify";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
@@ -108,11 +107,6 @@ export function LoginForm() {
         </button>
       </form>
 
-      <p className="login-card__demo">
-        Admin: <code>admin</code> / <code>0000</code>
-        <br />
-        Demo: <code>{SEED_DEMO_EMAIL}</code> / <code>SenhaTeste123!</code>
-      </p>
     </div>
   );
 }
