@@ -57,10 +57,32 @@ export async function POST(
     return NextResponse.json({ caption });
   } catch (error: unknown) {
     console.error("[POST /api/generate-copy]", error);
-    const message =
-      error instanceof Error && error.message.includes("OPENAI_API_KEY")
-        ? error.message
-        : "Não foi possível gerar a legenda com IA.";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const status = (error as { status?: number } | null)?.status;
+    const keyProblem =
+      status === 401 ||
+      (error instanceof Error && error.message.includes("OPENAI_API_KEY"));
+
+    if (keyProblem) {
+      return NextResponse.json(
+        {
+          error:
+            "A geração com IA não está configurada: a chave da OpenAI está ausente ou é inválida. Avise o administrador do sistema.",
+        },
+        { status: 503 },
+      );
+    }
+    if (status === 429) {
+      return NextResponse.json(
+        {
+          error:
+            "O limite de uso da OpenAI foi atingido (créditos ou taxa). Tente novamente mais tarde.",
+        },
+        { status: 503 },
+      );
+    }
+    return NextResponse.json(
+      { error: "Não foi possível gerar a legenda com IA." },
+      { status: 500 },
+    );
   }
 }

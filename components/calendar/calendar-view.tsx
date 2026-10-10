@@ -14,7 +14,10 @@ import {
   saveCalendarPreferences,
   type CalendarViewType,
 } from "@/lib/calendar/calendar-preferences";
-import { filterPostsForCalendar } from "@/lib/calendar/filter-posts";
+import {
+  DEFAULT_CALENDAR_FILTERS,
+  filterPostsForCalendar,
+} from "@/lib/calendar/filter-posts";
 import { mapPostsToCalendarEvents } from "@/lib/calendar/map-posts-to-events";
 import { defaultScheduleDate } from "@/lib/datetime/local-input";
 import { readApiErrorMessage } from "@/lib/api/read-api-error";
@@ -29,6 +32,7 @@ import type {
   EventDropArg,
 } from "@fullcalendar/core";
 import type { DateClickArg } from "@fullcalendar/interaction";
+import ptBrLocale from "@fullcalendar/core/locales/pt-br";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import listPlugin from "@fullcalendar/list";
@@ -51,7 +55,8 @@ export function CalendarView() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [preferencesReady, setPreferencesReady] = useState(false);
   const [calendarView, setCalendarView] = useState<CalendarViewType>("timeGridWeek");
-  const [filters, setFilters] = useState(() => loadCalendarPreferences().filters);
+  // Preferências só no cliente (useEffect) — evita mismatch de hidratação com localStorage.
+  const [filters, setFilters] = useState(DEFAULT_CALENDAR_FILTERS);
 
   const [formModalOpen, setFormModalOpen] = useState(false);
   const [formModalMode, setFormModalMode] = useState<PostModalMode>("create");
@@ -331,7 +336,7 @@ export function CalendarView() {
       // O calendário só monta após o carregamento; nesse momento a visão
       // preferida (ex.: lista no celular) já foi lida das preferências.
       initialView: calendarView,
-      locale: "pt-br",
+      locale: ptBrLocale,
       headerToolbar: {
         left: "prev,next today",
         center: "title",

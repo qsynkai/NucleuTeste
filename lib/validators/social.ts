@@ -1,8 +1,24 @@
-import { PostStatus, ProjectType, SocialChannel } from "@prisma/client";
+import type { PostStatus, ProjectType, SocialChannel } from "@prisma/client";
 
-const POST_STATUS_VALUES = Object.values(PostStatus) as PostStatus[];
-const SOCIAL_CHANNEL_VALUES = Object.values(SocialChannel) as SocialChannel[];
-const PROJECT_TYPE_VALUES = Object.values(ProjectType) as ProjectType[];
+const POST_STATUS_VALUES = [
+  "DRAFT",
+  "SCHEDULED",
+  "PUBLISHED",
+  "FAILED",
+] as const satisfies readonly PostStatus[];
+const SOCIAL_CHANNEL_VALUES = [
+  "INSTAGRAM",
+  "FACEBOOK",
+  "YOUTUBE",
+  "LINKEDIN",
+] as const satisfies readonly SocialChannel[];
+const PROJECT_TYPE_VALUES = [
+  "COMPANY",
+  "PERSONAL_BRAND",
+  "PROFESSIONAL",
+  "CAMPAIGN",
+  "OTHER",
+] as const satisfies readonly ProjectType[];
 
 export function isProjectType(value: unknown): value is ProjectType {
   return (

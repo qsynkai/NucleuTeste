@@ -38,7 +38,8 @@ export function PostEventCard({ arg }: { arg: EventContentArg }) {
   const headline = arg.event.title || "Sem título";
   const caption = summarize(props.content || headline);
   const project = props.showProject ? props.project : undefined;
-  const statusLabel = POST_STATUS_LABELS[props.status];
+  const status = props.status ?? "DRAFT";
+  const statusLabel = POST_STATUS_LABELS[status] ?? status;
 
   return (
     <div
@@ -61,7 +62,7 @@ export function PostEventCard({ arg }: { arg: EventContentArg }) {
       <p className="fc-post-card__caption">{caption}</p>
       <div className="fc-post-card__foot">
         <span
-          className={`fc-post-card__status fc-post-card__status--${props.status.toLowerCase()}`}
+          className={`fc-post-card__status fc-post-card__status--${status.toLowerCase()}`}
         >
           {statusLabel}
         </span>
