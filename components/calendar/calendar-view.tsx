@@ -2,13 +2,15 @@
 
 import { CalendarLoadingSkeleton } from "@/components/calendar/calendar-loading-skeleton";
 import { CalendarToolbar } from "@/components/calendar/calendar-toolbar";
-import { PostEventCard } from "@/components/calendar/post-event-card";
+import { CalendarEventCard } from "@/components/calendar/calendar-event-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PostDetailsModal } from "@/components/PostDetailsModal";
+import { CreateEntryDialog } from "@/components/CreateEntryDialog";
 import { PostModal, type PostModalMode } from "@/components/PostModal";
 import { ProjectStrip } from "@/components/projects/project-strip";
 import { useProjects } from "@/hooks/use-projects";
 import { useSelectedProject } from "@/hooks/use-selected-project";
+import { useSessionUser } from "@/hooks/use-session-user";
 import {
   loadCalendarPreferences,
   saveCalendarPreferences,
@@ -49,6 +51,8 @@ function isStoredViewType(value: string): value is CalendarViewType {
 }
 
 export function CalendarView() {
+  const { permissions } = useSessionUser();
+  const readOnly = permissions.readOnly;
   const calendarRef = useRef<FullCalendar>(null);
   const [allPosts, setAllPosts] = useState<PostCalendarItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,6 +62,7 @@ export function CalendarView() {
   // Preferências só no cliente (useEffect) — evita mismatch de hidratação com localStorage.
   const [filters, setFilters] = useState(DEFAULT_CALENDAR_FILTERS);
 
+  const [createEntryOpen, setCreateEntryOpen] = useState(false);
   const [formModalOpen, setFormModalOpen] = useState(false);
   const [formModalMode, setFormModalMode] = useState<PostModalMode>("create");
   const [formPostId, setFormPostId] = useState<string | null>(null);
@@ -223,10 +228,9 @@ export function CalendarView() {
   }, [preferencesReady]);
 
   const openCreateModal = useCallback((date?: Date) => {
-    setFormModalMode("create");
     setFormPostId(null);
     setInitialScheduledAt(defaultScheduleDate(date ?? new Date()));
-    setFormModalOpen(true);
+    setCreateEntryOpen(true);
   }, []);
 
   const openDetailsModal = useCallback((postId: string) => {
@@ -354,9 +358,9 @@ export function CalendarView() {
       height: "auto",
       expandRows: true,
       nowIndicator: true,
-      selectable: true,
-      selectMirror: true,
-      editable: true,
+      selectable: !readOnly,
+      selectMirror: !readOnly,
+      editable: !readOnly,
       eventDurationEditable: false,
       dayMaxEvents: 3,
       events,
@@ -364,7 +368,7 @@ export function CalendarView() {
       select: handleSelect,
       eventClick: handleEventClick,
       eventDrop: handleEventDrop,
-      eventContent: (arg: EventContentArg) => <PostEventCard arg={arg} />,
+      eventContent: (arg: EventContentArg) => <CalendarEventCard arg={arg} />,
       datesSet: handleDatesSet,
     }),
     [
@@ -375,11 +379,12 @@ export function CalendarView() {
       handleEventClick,
       handleEventDrop,
       handleDatesSet,
+      readOnly,
     ],
   );
 
   return (
-    <section className="calendar-shell">
+    <section className={`calendar-shell${readOnly ? " calendar-shell--readonly" : ""}`}>
       <header className="page-head">
         <div>
           <p className="eyebrow">
@@ -397,13 +402,15 @@ export function CalendarView() {
               Carregando
             </span>
           ) : null}
-          <button
-            type="button"
-            className="btn btn--primary"
-            onClick={() => openCreateModal()}
-          >
-            Novo agendamento
-          </button>
+          {permissions.canCreate ? (
+            <button
+              type="button"
+              className="btn btn--primary"
+              onClick={() => openCreateModal()}
+            >
+              + Novo
+            </button>
+          ) : null}
         </div>
       </header>
 
@@ -459,13 +466,15 @@ export function CalendarView() {
                 }
                 description="Ajuste os filtros ou clique em um horário vago na grade para criar um agendamento."
                 action={
-                  <button
-                    type="button"
-                    className="btn btn--primary"
-                    onClick={() => openCreateModal()}
-                  >
-                    Novo agendamento
-                  </button>
+                  permissions.canCreate ? (
+                    <button
+                      type="button"
+                      className="btn btn--primary"
+                      onClick={() => openCreateModal()}
+                    >
+                      + Novo
+                    </button>
+                  ) : undefined
                 }
               />
             ) : null}
@@ -480,7 +489,17 @@ export function CalendarView() {
         onClose={() => setDetailsOpen(false)}
         onUpdated={handlePostUpdated}
         onDeleted={() => void loadPosts({ silent: true })}
-        onEdit={openEditModal}
+        onEdit={readOnly ? undefined : openEditModal}
+        canEdit={!readOnly}
+        canDelete={permissions.canDelete}
+      />
+
+      <CreateEntryDialog
+        open={createEntryOpen}
+        initialScheduledAt={initialScheduledAt}
+        defaultProjectId={projectId}
+        onClose={() => setCreateEntryOpen(false)}
+        onSaved={() => void loadPosts({ silent: true })}
       />
 
       <PostModal

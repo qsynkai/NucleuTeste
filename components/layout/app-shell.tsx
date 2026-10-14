@@ -1,13 +1,14 @@
 "use client";
 
 import { BrandMark } from "@/components/brand/brand-mark";
-import { BrandLogo } from "@/components/brand/brand-logo";
 import { Ambient } from "@/components/ui/ambient";
 import { usePointerGlow } from "@/hooks/use-pointer-glow";
+import { useSessionUser } from "@/hooks/use-session-user";
 import { APP_NAME, BRAND_MODULE, BRAND_WORDMARK } from "@/lib/constants/brand";
 import { notifySuccess } from "@/lib/notify";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useMemo } from "react";
 
 const iconProps = {
   width: 18,
@@ -43,6 +44,21 @@ const ProjectsIcon = () => (
   </svg>
 );
 
+const UsersIcon = () => (
+  <svg {...iconProps}>
+    <circle cx="7" cy="6" r="2.5" />
+    <path d="M2.5 15v-1a4 4 0 0 1 4-4h1a4 4 0 0 1 4 4v1" />
+    <path d="M13 5.5a2 2 0 1 1 0 4M15.5 15v-1a3 3 0 0 0-2.2-2.9" />
+  </svg>
+);
+
+const TechIcon = () => (
+  <svg {...iconProps}>
+    <path d="M3 14.5 8 3.5l7 11" />
+    <path d="M5.5 10.5h5" />
+  </svg>
+);
+
 const LogoutIcon = () => (
   <svg {...iconProps}>
     <path d="M7 15.5H4.5A1.5 1.5 0 0 1 3 14V4a1.5 1.5 0 0 1 1.5-1.5H7" />
@@ -50,7 +66,13 @@ const LogoutIcon = () => (
   </svg>
 );
 
-const NAV = [
+type NavItem = {
+  href: string;
+  label: string;
+  icon: React.ReactNode;
+};
+
+const BASE_NAV: NavItem[] = [
   { href: "/dashboard", label: "Visão geral", icon: <OverviewIcon /> },
   { href: "/calendar", label: "Agenda", icon: <CalendarIcon /> },
   { href: "/projects", label: "Projetos", icon: <ProjectsIcon /> },
@@ -63,7 +85,27 @@ type AppShellProps = {
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const { permissions } = useSessionUser();
   usePointerGlow();
+
+  const navItems = useMemo(() => {
+    const items = [...BASE_NAV];
+    if (permissions.canAccessTechArea) {
+      items.push({
+        href: "/tech-area",
+        label: "Área técnica",
+        icon: <TechIcon />,
+      });
+    }
+    if (permissions.canManageUsers) {
+      items.push({
+        href: "/admin/users",
+        label: "Usuários",
+        icon: <UsersIcon />,
+      });
+    }
+    return items;
+  }, [permissions.canAccessTechArea, permissions.canManageUsers]);
 
   const logout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -86,7 +128,7 @@ export function AppShell({ children }: AppShellProps) {
 
         <nav className="sidebar__nav" aria-label="Principal">
           <span className="eyebrow sidebar__label">Navegação</span>
-          {NAV.map((item) => {
+          {navItems.map((item) => {
             const active = pathname.startsWith(item.href);
             return (
               <Link

@@ -10,6 +10,7 @@ import { ProjectAvatar } from "@/components/projects/project-avatar";
 import { ProjectStrip } from "@/components/projects/project-strip";
 import { useProjects } from "@/hooks/use-projects";
 import { useSelectedProject } from "@/hooks/use-selected-project";
+import { useSessionUser } from "@/hooks/use-session-user";
 import Link from "next/link";
 import { POST_STATUS_LABELS, postStatusBadgeClassName } from "@/lib/posts/status-meta";
 import { readApiErrorMessage } from "@/lib/api/read-api-error";
@@ -165,6 +166,7 @@ export function DashboardView() {
   const [formMode, setFormMode] = useState<PostModalMode>("edit");
   const [formPostId, setFormPostId] = useState<string | null>(null);
   const [formInitialDate, setFormInitialDate] = useState<Date | null>(null);
+  const { permissions } = useSessionUser();
   const { projectId, select: selectProject } = useSelectedProject();
   const {
     projects: allProjects,
@@ -297,9 +299,11 @@ export function DashboardView() {
           <span className="date-chip" suppressHydrationWarning>
             {today ?? " "}
           </span>
-          <button type="button" className="btn btn--primary" onClick={openCreate}>
-            Novo agendamento
-          </button>
+          {permissions.canCreate ? (
+            <button type="button" className="btn btn--primary" onClick={openCreate}>
+              Novo agendamento
+            </button>
+          ) : null}
         </div>
       </header>
 
@@ -463,7 +467,9 @@ export function DashboardView() {
         onClose={() => setDetailsOpen(false)}
         onUpdated={refreshAfterChange}
         onDeleted={refreshAfterChange}
-        onEdit={openEdit}
+        onEdit={permissions.canCreate ? openEdit : undefined}
+        canEdit={permissions.canCreate}
+        canDelete={permissions.canDelete}
       />
 
       <PostModal

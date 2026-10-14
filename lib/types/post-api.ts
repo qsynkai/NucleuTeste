@@ -1,5 +1,17 @@
-import type { PostStatus, SocialChannel } from "@prisma/client";
+import type {
+  AppointmentStatus,
+  AttendanceType,
+  EntryType,
+  EventStatus,
+  PostStatus,
+  ServiceChannel,
+  SocialChannel,
+} from "@prisma/client";
 import type { ProjectSummary } from "@/lib/types/project-api";
+
+export type PostCalendarTaskSummary = {
+  price: string;
+};
 
 export type PostCalendarItem = {
   id: string;
@@ -11,6 +23,14 @@ export type PostCalendarItem = {
   mediaUrls: string[];
   projectId: string;
   project: ProjectSummary;
+  entryType: EntryType;
+  durationMinutes: number | null;
+  currentStatus: EventStatus;
+  attendanceType: AttendanceType | null;
+  clientName: string | null;
+  appointmentStatus: AppointmentStatus | null;
+  serviceChannel: ServiceChannel | null;
+  tasks: PostCalendarTaskSummary[];
 };
 
 export type PostsListResponse = {

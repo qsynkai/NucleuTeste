@@ -20,6 +20,8 @@ type PostDetailsModalProps = {
   onUpdated: (post?: PostCalendarItem) => void;
   onDeleted: () => void;
   onEdit?: (postId: string) => void;
+  canEdit?: boolean;
+  canDelete?: boolean;
 };
 
 function formatScheduledAt(value: string | null): string {
@@ -35,7 +37,14 @@ function formatScheduledAt(value: string | null): string {
 }
 
 export function PostDetailsModal({
-  open, postId, onClose, onUpdated, onDeleted, onEdit,
+  open,
+  postId,
+  onClose,
+  onUpdated,
+  onDeleted,
+  onEdit,
+  canEdit = true,
+  canDelete = true,
 }: PostDetailsModalProps) {
   const titleId = useId();
   const panelRef = useRef<HTMLDialogElement>(null);
@@ -218,7 +227,7 @@ export function PostDetailsModal({
                       id={`${titleId}-status`}
                       className="field__input"
                       value={post.status}
-                      disabled={busy}
+                      disabled={busy || !canEdit}
                       onChange={(e) => void patchStatus(e.target.value as PostStatus)}
                     >
                       {STATUS_OPTIONS.map((s) => (
@@ -261,22 +270,26 @@ export function PostDetailsModal({
                 <button type="button" className="btn btn--ghost" disabled={busy || !post.mediaUrls.length} onClick={() => void handleDownloadMedia()}>
                   Baixar mídia
                 </button>
-                <button
-                  type="button"
-                  className="btn btn--ghost"
-                  disabled={busy || post.status === "PUBLISHED"}
-                  onClick={() => void patchStatus("PUBLISHED")}
-                >
-                  Marcar publicado
-                </button>
-                {onEdit ? (
+                {canEdit ? (
+                  <button
+                    type="button"
+                    className="btn btn--ghost"
+                    disabled={busy || post.status === "PUBLISHED"}
+                    onClick={() => void patchStatus("PUBLISHED")}
+                  >
+                    Marcar publicado
+                  </button>
+                ) : null}
+                {onEdit && canEdit ? (
                   <button type="button" className="btn btn--ghost" disabled={busy} onClick={() => onEdit(post.id)}>
                     Editar
                   </button>
                 ) : null}
-                <button type="button" className="btn btn--danger" disabled={busy} onClick={() => setConfirmDelete(true)}>
-                  Excluir
-                </button>
+                {canDelete ? (
+                  <button type="button" className="btn btn--danger" disabled={busy} onClick={() => setConfirmDelete(true)}>
+                    Excluir
+                  </button>
+                ) : null}
               </footer>
             </div>
           ) : (

@@ -22,6 +22,14 @@ function post(overrides: Partial<PostCalendarItem>): PostCalendarItem {
     mediaUrls: [],
     projectId: project.id,
     project,
+    entryType: "SOCIAL_POST",
+    durationMinutes: 60,
+    currentStatus: "OPEN",
+    attendanceType: null,
+    clientName: null,
+    appointmentStatus: null,
+    serviceChannel: null,
+    tasks: [],
     ...overrides,
   };
 }
@@ -41,5 +49,16 @@ describe("mapPostsToCalendarEvents", () => {
   it("esconde o indicador de projeto por padrão", () => {
     const [event] = mapPostsToCalendarEvents([post({})]);
     assert.equal(event.extendedProps?.showProject, false);
+  });
+
+  it("propaga entryType e total de produção", () => {
+    const [event] = mapPostsToCalendarEvents([
+      post({
+        entryType: "PRODUCTION_EVENT",
+        tasks: [{ price: "150.50" }, { price: "49.50" }],
+      }),
+    ]);
+    assert.equal(event.extendedProps?.entryType, "PRODUCTION_EVENT");
+    assert.equal(event.extendedProps?.productionTotalCents, 20000);
   });
 });

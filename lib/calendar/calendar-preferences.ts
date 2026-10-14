@@ -1,9 +1,13 @@
 import {
+  CALENDAR_ENTRY_TYPE_ORDER,
+  defaultVisibleEntryTypes,
+} from "@/lib/calendar/calendar-entry-types";
+import {
   CALENDAR_STATUS_FILTER_OPTIONS,
   DEFAULT_CALENDAR_FILTERS,
   type CalendarFilters,
 } from "@/lib/calendar/filter-posts";
-import type { PostStatus, SocialChannel } from "@prisma/client";
+import type { EntryType, PostStatus, SocialChannel } from "@prisma/client";
 
 import { APP_SLUG } from "@/lib/constants/brand";
 
@@ -61,6 +65,16 @@ function parseStatuses(value: unknown): PostStatus[] {
   );
 }
 
+function parseEntryTypes(value: unknown): EntryType[] {
+  if (!Array.isArray(value)) return defaultVisibleEntryTypes();
+  const parsed = value.filter(
+    (item): item is EntryType =>
+      typeof item === "string" &&
+      CALENDAR_ENTRY_TYPE_ORDER.includes(item as EntryType),
+  );
+  return parsed.length ? parsed : defaultVisibleEntryTypes();
+}
+
 function parseFilters(value: unknown): CalendarFilters {
   if (!value || typeof value !== "object") {
     return DEFAULT_CALENDAR_FILTERS;
@@ -72,6 +86,7 @@ function parseFilters(value: unknown): CalendarFilters {
     statuses: parseStatuses(record.statuses),
     searchQuery:
       typeof record.searchQuery === "string" ? record.searchQuery : "",
+    visibleEntryTypes: parseEntryTypes(record.visibleEntryTypes),
   };
 }
 

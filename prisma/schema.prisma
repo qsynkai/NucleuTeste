@@ -30,15 +30,63 @@ enum ProjectType {
   OTHER
 }
 
+enum Role {
+  ADMIN
+  COLLABORATOR
+  TECHNICIAN
+  PARTNER
+}
+
+enum EntryType {
+  SOCIAL_POST
+  PRODUCTION_EVENT
+  CUSTOMER_SERVICE
+  SIMPLE_REMINDER
+}
+
+enum EventStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_COLLABORATORS
+  COMPLETED
+  CANCELLED
+}
+
+enum AttendanceType {
+  CORPORATE_MEETING
+  SERVICE_APPOINTMENT
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  IN_SERVICE
+  COMPLETED
+  NO_SHOW
+  CANCELLED
+}
+
+enum ServiceChannel {
+  GOOGLE_MEET
+  WHATSAPP
+  PHONE_CALL
+  IN_PERSON
+  OTHER
+}
+
 model User {
   id           String    @id @default(cuid())
   name         String
   email        String    @unique
   passwordHash String
+  role         Role      @default(COLLABORATOR)
+  isActive     Boolean   @default(true)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   posts        Post[]
   projects     Project[]
+  assignedEventTasks EventTask[]       @relation("EventTaskAssignee")
+  eventStatusChanges   EventStatusHistory[]
 }
 
 model Project {
@@ -59,20 +107,34 @@ model Project {
   @@index([ownerId, isActive])
 }
 
+/// Agendamento unificado (post social, evento de produção, atendimento, lembrete).
 model Post {
   id          String        @id @default(cuid())
   title       String
   content     String
   scheduledAt DateTime?
   status      PostStatus    @default(DRAFT)
+  entryType   EntryType     @default(SOCIAL_POST)
+  currentStatus EventStatus @default(OPEN)
   userId      String
   user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   projectId   String
-  // NoAction: impede apagar um projeto que ainda tem posts, mas permite o
-  // cascade de User -> Project/Post (a checagem ocorre ao fim do statement).
   project     Project       @relation(fields: [projectId], references: [id], onDelete: NoAction)
   channels    PostChannel[]
   mediaUrls   String[]
+  externalLinks Json?
+  attendanceType     AttendanceType?
+  clientName         String?
+  clientPhone        String?
+  durationMinutes    Int?
+  serviceChannel     ServiceChannel?
+  meetingUrl         String?
+  meetingNotes       String?
+  internalResponsible   String?
+  assignedProfessional  String?
+  appointmentStatus  AppointmentStatus?
+  tasks              EventTask[]
+  statusHistory      EventStatusHistory[]
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
@@ -80,6 +142,8 @@ model Post {
   @@index([projectId])
   @@index([status])
   @@index([scheduledAt])
+  @@index([entryType])
+  @@index([currentStatus])
 }
 
 model PostChannel {
@@ -91,4 +155,46 @@ model PostChannel {
 
   @@unique([postId, channel])
   @@index([channel])
+}
+
+model TaskCatalog {
+  id         String      @id @default(cuid())
+  name       String      @unique
+  basePrice  Decimal     @db.Decimal(12, 2)
+  isActive   Boolean     @default(true)
+  createdAt  DateTime    @default(now())
+  eventTasks EventTask[]
+}
+
+model EventTask {
+  id               String       @id @default(cuid())
+  eventId          String
+  event            Post         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  taskCatalogId    String?
+  taskCatalog      TaskCatalog? @relation(fields: [taskCatalogId], references: [id], onDelete: SetNull)
+  customName       String?
+  price            Decimal      @db.Decimal(12, 2)
+  completed        Boolean      @default(false)
+  assignedToUserId String?
+  assignedTo       User?        @relation("EventTaskAssignee", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@index([eventId])
+  @@index([taskCatalogId])
+  @@index([assignedToUserId])
+}
+
+model EventStatusHistory {
+  id        String      @id @default(cuid())
+  eventId   String
+  event     Post        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  status    EventStatus
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notes     String?
+  createdAt DateTime    @default(now())
+
+  @@index([eventId, createdAt])
+  @@index([userId])
 }

@@ -1,6 +1,8 @@
 "use client";
 
+import { CalendarCategoryFilters } from "@/components/calendar/calendar-category-filters";
 import { SocialChannelIcons } from "@/components/calendar/social-channel-icons";
+import { defaultVisibleEntryTypes, isAllEntryTypesVisible } from "@/lib/calendar/calendar-entry-types";
 import {
   CALENDAR_STATUS_FILTER_OPTIONS,
   type CalendarFilters,
@@ -49,16 +51,19 @@ export function CalendarToolbar({
       channels: [],
       statuses: [],
       searchQuery: "",
+      visibleEntryTypes: defaultVisibleEntryTypes(),
     });
   };
 
   const hasActiveFilters =
     filters.channels.length > 0 ||
     filters.statuses.length > 0 ||
-    filters.searchQuery.trim().length > 0;
+    filters.searchQuery.trim().length > 0 ||
+    !isAllEntryTypesVisible(filters.visibleEntryTypes);
 
   return (
     <div className="calendar-toolbar" role="region" aria-label="Filtros da agenda">
+      <CalendarCategoryFilters filters={filters} onChange={onChange} />
       <div className="calendar-toolbar__row">
         <div className="calendar-toolbar__group">
           <span className="calendar-toolbar__label">Redes</span>

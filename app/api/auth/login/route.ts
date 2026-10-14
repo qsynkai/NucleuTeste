@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "JSON inválido." }, { status: 400 });
   }
 
-  const email = body.email?.trim().toLowerCase();
+  const email = body.email?.trim();
   const password = body.password ?? "";
 
   if (!email || !password) {
@@ -41,6 +41,13 @@ export async function POST(request: Request) {
       );
     }
 
+    if (!user.isActive) {
+      return NextResponse.json(
+        { error: "Usuário desativado. Contate o administrador." },
+        { status: 403 },
+      );
+    }
+
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) {
       return NextResponse.json(
@@ -49,9 +56,14 @@ export async function POST(request: Request) {
       );
     }
 
-    const token = await createSessionToken(user.id);
+    const token = await createSessionToken(user.id, user.role);
     const response = NextResponse.json({
-      user: { id: user.id, name: user.name, email: user.email },
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
     });
     response.cookies.set(getSessionCookieName(), token, sessionCookieOptions);
     return response;

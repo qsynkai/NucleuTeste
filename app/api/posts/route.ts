@@ -1,4 +1,5 @@
-import { requireSession } from "@/lib/auth/require-session";
+import { canCreateEvent } from "@/lib/auth/permissions";
+import { forbidden, requireUser } from "@/lib/auth/require-user";
 import { prisma } from "@/lib/prisma";
 import { databaseUnavailableResponse } from "@/lib/prisma/database-unavailable-response";
 import { isDatabaseUnavailable } from "@/lib/prisma/is-database-unavailable";
@@ -13,7 +14,7 @@ import { NextResponse } from "next/server";
 export async function GET(
   request: Request,
 ): Promise<NextResponse<PostsListResponse | { error: string }>> {
-  const auth = await requireSession();
+  const auth = await requireUser();
   if (!auth.ok) return auth.response;
 
   const projectId =
@@ -23,14 +24,14 @@ export async function GET(
     let where: Prisma.PostWhereInput;
 
     if (projectId) {
-      const access = await requireOwnedProject(auth.userId, projectId, {
+      const access = await requireOwnedProject(auth.user.id, projectId, {
         allowArchived: true,
       });
       if (!access.ok) return access.response;
-      where = { userId: auth.userId, projectId };
+      where = { userId: auth.user.id, projectId };
     } else {
       // Visão global: todos os projetos ativos do usuário.
-      where = { userId: auth.userId, project: { isActive: true } };
+      where = { userId: auth.user.id, project: { isActive: true } };
     }
 
     const rows = await prisma.post.findMany({
@@ -57,8 +58,9 @@ export async function GET(
 export async function POST(
   request: Request,
 ): Promise<NextResponse<PostCalendarItem | { error: string }>> {
-  const auth = await requireSession();
+  const auth = await requireUser();
   if (!auth.ok) return auth.response;
+  if (!canCreateEvent(auth.user)) return forbidden();
 
   let body: unknown;
   try {
@@ -76,7 +78,7 @@ export async function POST(
   }
 
   try {
-    const access = await requireOwnedProject(auth.userId, payload.projectId, {
+    const access = await requireOwnedProject(auth.user.id, payload.projectId, {
       allowArchived: false,
     });
     if (!access.ok) return access.response;
@@ -88,7 +90,7 @@ export async function POST(
         scheduledAt: payload.scheduledAt,
         status: "SCHEDULED",
         mediaUrls: payload.mediaUrls,
-        userId: auth.userId,
+        userId: auth.user.id,
         projectId: access.project.id,
         channels: {
           create: payload.channels.map((channel) => ({ channel })),

@@ -1,4 +1,5 @@
-import { requireSession } from "@/lib/auth/require-session";
+import { canManageProjects } from "@/lib/auth/permissions";
+import { forbidden, requireUser } from "@/lib/auth/require-user";
 import { prisma } from "@/lib/prisma";
 import { databaseUnavailableResponse } from "@/lib/prisma/database-unavailable-response";
 import { isDatabaseUnavailable } from "@/lib/prisma/is-database-unavailable";
@@ -12,14 +13,14 @@ import { NextResponse } from "next/server";
 export async function GET(
   request: Request,
 ): Promise<NextResponse<ProjectsListResponse | { error: string }>> {
-  const auth = await requireSession();
+  const auth = await requireUser();
   if (!auth.ok) return auth.response;
 
   const includeArchived =
     new URL(request.url).searchParams.get("includeArchived") === "1";
 
   try {
-    const projects = await listProjectItems(auth.userId, { includeArchived });
+    const projects = await listProjectItems(auth.user.id, { includeArchived });
     return NextResponse.json({ projects });
   } catch (error: unknown) {
     console.error("[GET /api/projects]", error);
@@ -36,8 +37,9 @@ export async function GET(
 export async function POST(
   request: Request,
 ): Promise<NextResponse<ProjectListItem | { error: string }>> {
-  const auth = await requireSession();
+  const auth = await requireUser();
   if (!auth.ok) return auth.response;
+  if (!canManageProjects(auth.user)) return forbidden();
 
   let body: unknown;
   try {
@@ -75,7 +77,7 @@ export async function POST(
           avatarUrl: payload.avatarUrl,
           description: payload.description,
           accentColor: payload.accentColor,
-          ownerId: auth.userId,
+          ownerId: auth.user.id,
         },
         select: { id: true },
       });
@@ -93,7 +95,7 @@ export async function POST(
       created = await create(`${baseSlug.slice(0, 52)}-${Date.now().toString(36).slice(-6)}`);
     }
 
-    const item = await getProjectItem(auth.userId, created.id);
+    const item = await getProjectItem(auth.user.id, created.id);
     if (!item) {
       return NextResponse.json(
         { error: "Não foi possível salvar o projeto." },

@@ -18,5 +18,13 @@ export function serializePost(post: PostWithRelations): PostCalendarItem {
       type: post.project.type,
       accentColor: post.project.accentColor,
     },
+    entryType: post.entryType,
+    durationMinutes: post.durationMinutes,
+    currentStatus: post.currentStatus,
+    attendanceType: post.attendanceType,
+    clientName: post.clientName,
+    appointmentStatus: post.appointmentStatus,
+    serviceChannel: post.serviceChannel,
+    tasks: post.tasks.map((task) => ({ price: task.price.toString() })),
   };
 }

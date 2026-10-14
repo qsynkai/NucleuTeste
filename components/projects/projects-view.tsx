@@ -7,6 +7,7 @@ import { useProjects } from "@/hooks/use-projects";
 import { PROJECT_TYPE_LABELS } from "@/lib/projects/project-meta";
 import type { ProjectListItem } from "@/lib/types/project-api";
 import Link from "next/link";
+import { useSessionUser } from "@/hooks/use-session-user";
 import { useState } from "react";
 
 const pad = (value: number) => String(value).padStart(2, "0");
@@ -24,9 +25,11 @@ function ProjectsSkeleton() {
 function ProjectCard({
   project,
   onEdit,
+  canManage,
 }: {
   project: ProjectListItem;
   onEdit: (project: ProjectListItem) => void;
+  canManage: boolean;
 }) {
   return (
     <li className={`panel project-card${project.isActive ? "" : " project-card--archived"}`}>
@@ -72,20 +75,23 @@ function ProjectCard({
         >
           Abrir agenda
         </Link>
-        <button
-          type="button"
-          className="btn btn--small"
-          onClick={() => onEdit(project)}
-          aria-label={`Editar projeto ${project.name}`}
-        >
-          Editar
-        </button>
+        {canManage ? (
+          <button
+            type="button"
+            className="btn btn--small"
+            onClick={() => onEdit(project)}
+            aria-label={`Editar projeto ${project.name}`}
+          >
+            Editar
+          </button>
+        ) : null}
       </div>
     </li>
   );
 }
 
 export function ProjectsView() {
+  const { permissions } = useSessionUser();
   const { projects, loading, error, reload } = useProjects({ includeArchived: true });
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ProjectListItem | null>(null);
@@ -119,9 +125,11 @@ export function ProjectsView() {
               {pad(activeCount)} {activeCount === 1 ? "ativo" : "ativos"}
             </span>
           ) : null}
-          <button type="button" className="btn btn--primary" onClick={openCreate}>
-            Novo projeto
-          </button>
+          {permissions.canManageProjects ? (
+            <button type="button" className="btn btn--primary" onClick={openCreate}>
+              Novo projeto
+            </button>
+          ) : null}
         </div>
       </header>
 
@@ -151,7 +159,12 @@ export function ProjectsView() {
       ) : (
         <ul className="projects-grid">
           {projects.map((project) => (
-            <ProjectCard key={project.id} project={project} onEdit={openEdit} />
+            <ProjectCard
+              key={project.id}
+              project={project}
+              onEdit={openEdit}
+              canManage={permissions.canManageProjects}
+            />
           ))}
         </ul>
       )}

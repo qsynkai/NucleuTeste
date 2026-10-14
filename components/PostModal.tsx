@@ -32,6 +32,8 @@ type PostModalProps = {
   defaultProjectId?: string | null;
   onClose: () => void;
   onSaved: () => void;
+  /** Renderiza só o formulário (dentro de CreateEntryDialog). */
+  embedded?: boolean;
 };
 
 type FormState = {
@@ -84,10 +86,11 @@ export function PostModal({
   defaultProjectId = null,
   onClose,
   onSaved,
+  embedded = false,
 }: PostModalProps) {
   const formId = useId();
   const panelRef = useRef<HTMLDialogElement>(null);
-  useModalA11y(open, onClose, panelRef);
+  useModalA11y(open && !embedded, onClose, panelRef);
   const [form, setForm] = useState<FormState>(() =>
     buildInitialForm(initialScheduledAt, defaultProjectId ?? ""),
   );
@@ -387,38 +390,17 @@ export function PostModal({
 
   if (!open) return null;
 
-  return (
-    <div className="modal-backdrop" role="presentation" onClick={onClose}>
-      <dialog
-        ref={panelRef}
-        className="modal-panel modal-panel--wide post-modal"
-        open
-        aria-modal="true"
-        aria-labelledby={`${formId}-title`}
-        onClick={(event) => event.stopPropagation()}
-        onCancel={(event) => {
-          event.preventDefault();
-          onClose();
-        }}
-      >
-        <header className="modal-panel__header">
-          <div>
-            <p className="eyebrow">{mode === "edit" ? "Edição" : "Planejamento"}</p>
-            <h2 id={`${formId}-title`}>{title}</h2>
-          </div>
-          <button type="button" className="modal-panel__close" onClick={onClose}>
-            Fechar
-          </button>
-        </header>
-
-        {loadingPost ? (
-          <div className="post-modal__loading" aria-busy="true">
-            <div className="skeleton" style={{ height: 12, width: "33%" }} />
-            <div className="skeleton" style={{ height: 40 }} />
-            <div className="skeleton" style={{ height: 96 }} />
-          </div>
-        ) : (
-          <form className="post-modal__form" onSubmit={handleSubmit}>
+  const formBody = loadingPost ? (
+    <div className="post-modal__loading" aria-busy="true">
+      <div className="skeleton" style={{ height: 12, width: "33%" }} />
+      <div className="skeleton" style={{ height: 40 }} />
+      <div className="skeleton" style={{ height: 96 }} />
+    </div>
+  ) : (
+    <form
+      className={`post-modal__form${embedded ? " create-entry-form__body" : ""}`}
+      onSubmit={handleSubmit}
+    >
             <fieldset className="form-section">
               <legend className="form-section__legend">01 · Destino e horário</legend>
 
@@ -603,7 +585,13 @@ export function PostModal({
               </div>
             ) : null}
 
-            <footer className="modal-panel__footer post-modal__footer">
+            <footer
+              className={
+                embedded
+                  ? "create-entry-form__footer"
+                  : "modal-panel__footer post-modal__footer"
+              }
+            >
               <button
                 type="button"
                 className="btn btn--ghost"
@@ -621,7 +609,36 @@ export function PostModal({
               </button>
             </footer>
           </form>
-        )}
+  );
+
+  if (embedded) {
+    return formBody;
+  }
+
+  return (
+    <div className="modal-backdrop" role="presentation" onClick={onClose}>
+      <dialog
+        ref={panelRef}
+        className="modal-panel modal-panel--wide post-modal"
+        open
+        aria-modal="true"
+        aria-labelledby={`${formId}-title`}
+        onClick={(event) => event.stopPropagation()}
+        onCancel={(event) => {
+          event.preventDefault();
+          onClose();
+        }}
+      >
+        <header className="modal-panel__header">
+          <div>
+            <p className="eyebrow">{mode === "edit" ? "Edição" : "Planejamento"}</p>
+            <h2 id={`${formId}-title`}>{title}</h2>
+          </div>
+          <button type="button" className="modal-panel__close" onClick={onClose}>
+            Fechar
+          </button>
+        </header>
+        {formBody}
       </dialog>
     </div>
   );

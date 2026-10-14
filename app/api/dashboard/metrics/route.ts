@@ -1,4 +1,4 @@
-import { requireSession } from "@/lib/auth/require-session";
+import { requireUser } from "@/lib/auth/require-user";
 import { queryDashboardMetrics } from "@/lib/dashboard/query-metrics";
 import { databaseUnavailableResponse } from "@/lib/prisma/database-unavailable-response";
 import { isDatabaseUnavailable } from "@/lib/prisma/is-database-unavailable";
@@ -9,7 +9,7 @@ import { NextResponse } from "next/server";
 export async function GET(
   request: Request,
 ): Promise<NextResponse<DashboardMetricsResponse | { error: string }>> {
-  const auth = await requireSession();
+  const auth = await requireUser();
   if (!auth.ok) return auth.response;
 
   const projectId =
@@ -17,13 +17,13 @@ export async function GET(
 
   try {
     if (projectId) {
-      const access = await requireOwnedProject(auth.userId, projectId, {
+      const access = await requireOwnedProject(auth.user.id, projectId, {
         allowArchived: true,
       });
       if (!access.ok) return access.response;
     }
 
-    const metrics = await queryDashboardMetrics(auth.userId, projectId);
+    const metrics = await queryDashboardMetrics(auth.user.id, projectId);
     return NextResponse.json(metrics);
   } catch (error: unknown) {
     console.error("[GET /api/dashboard/metrics]", error);

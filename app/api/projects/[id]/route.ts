@@ -1,4 +1,5 @@
-import { requireSession } from "@/lib/auth/require-session";
+import { canManageProjects } from "@/lib/auth/permissions";
+import { forbidden, requireUser } from "@/lib/auth/require-user";
 import { prisma } from "@/lib/prisma";
 import { getProjectItem } from "@/lib/projects/query-projects";
 import type { ProjectListItem } from "@/lib/types/project-api";
@@ -13,7 +14,7 @@ export async function GET(
   _request: Request,
   context: RouteContext,
 ): Promise<NextResponse<ProjectListItem | { error: string }>> {
-  const auth = await requireSession();
+  const auth = await requireUser();
   if (!auth.ok) return auth.response;
 
   const { id } = await context.params;
@@ -22,7 +23,7 @@ export async function GET(
   }
 
   try {
-    const project = await getProjectItem(auth.userId, id);
+    const project = await getProjectItem(auth.user.id, id);
     if (!project) {
       return NextResponse.json(
         { error: "Projeto não encontrado." },
@@ -43,8 +44,9 @@ export async function PATCH(
   request: Request,
   context: RouteContext,
 ): Promise<NextResponse<ProjectListItem | { error: string }>> {
-  const auth = await requireSession();
+  const auth = await requireUser();
   if (!auth.ok) return auth.response;
+  if (!canManageProjects(auth.user)) return forbidden();
 
   const { id } = await context.params;
   if (!id.trim()) {
@@ -68,7 +70,7 @@ export async function PATCH(
 
   try {
     const updated = await prisma.project.updateMany({
-      where: { id, ownerId: auth.userId },
+      where: { id, ownerId: auth.user.id },
       data: changes,
     });
     if (updated.count === 0) {
@@ -78,7 +80,7 @@ export async function PATCH(
       );
     }
 
-    const project = await getProjectItem(auth.userId, id);
+    const project = await getProjectItem(auth.user.id, id);
     if (!project) {
       return NextResponse.json(
         { error: "Projeto não encontrado." },

@@ -1,3 +1,4 @@
+import type { Role } from "@prisma/client";
 import { SignJWT, jwtVerify } from "jose";
 
 const SESSION_COOKIE = "ia_session";
@@ -15,8 +16,11 @@ export function getSessionCookieName(): string {
   return SESSION_COOKIE;
 }
 
-export async function createSessionToken(userId: string): Promise<string> {
-  return new SignJWT({ sub: userId })
+export async function createSessionToken(
+  userId: string,
+  role: Role,
+): Promise<string> {
+  return new SignJWT({ sub: userId, role })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(`${SESSION_MAX_AGE_SECONDS}s`)
@@ -25,12 +29,21 @@ export async function createSessionToken(userId: string): Promise<string> {
 
 export async function verifySessionToken(
   token: string,
-): Promise<{ userId: string } | null> {
+): Promise<{ userId: string; role: Role } | null> {
   try {
     const { payload } = await jwtVerify(token, getSecretKey());
     const userId = payload.sub;
-    if (!userId) return null;
-    return { userId };
+    const role = payload.role;
+    if (!userId || typeof role !== "string") return null;
+    if (
+      role !== "ADMIN" &&
+      role !== "COLLABORATOR" &&
+      role !== "TECHNICIAN" &&
+      role !== "PARTNER"
+    ) {
+      return null;
+    }
+    return { userId, role };
   } catch {
     return null;
   }

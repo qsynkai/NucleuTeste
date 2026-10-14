@@ -1,4 +1,5 @@
-import { requireSession } from "@/lib/auth/require-session";
+import { canCreateEvent } from "@/lib/auth/permissions";
+import { forbidden, requireUser } from "@/lib/auth/require-user";
 import {
   buildCopySystemPrompt,
   buildCopyUserPrompt,
@@ -11,8 +12,9 @@ import { NextResponse } from "next/server";
 export async function POST(
   request: Request,
 ): Promise<NextResponse<GenerateCopyResponse | { error: string }>> {
-  const auth = await requireSession();
+  const auth = await requireUser();
   if (!auth.ok) return auth.response;
+  if (!canCreateEvent(auth.user)) return forbidden();
 
   let body: unknown;
   try {

@@ -14,6 +14,10 @@ export const postInclude = {
     orderBy: { channel: "asc" },
   },
   project: { select: projectSummarySelect },
+  tasks: {
+    select: { price: true },
+    orderBy: { createdAt: "asc" },
+  },
 } satisfies Prisma.PostInclude;
 
 export type PostWithRelations = Prisma.PostGetPayload<{
