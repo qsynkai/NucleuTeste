@@ -1,14 +1,17 @@
 "use client";
 
 import { BrandMark } from "@/components/brand/brand-mark";
+import { CreateEntryDialog } from "@/components/CreateEntryDialog";
 import { Ambient } from "@/components/ui/ambient";
 import { usePointerGlow } from "@/hooks/use-pointer-glow";
 import { useSessionUser } from "@/hooks/use-session-user";
 import { APP_NAME, BRAND_MODULE, BRAND_WORDMARK } from "@/lib/constants/brand";
+import { defaultScheduleDate } from "@/lib/datetime/local-input";
+import { ROLE_LABELS } from "@/lib/auth/role-meta";
 import { notifySuccess } from "@/lib/notify";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 const iconProps = {
   width: 18,
@@ -85,8 +88,15 @@ type AppShellProps = {
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { permissions } = useSessionUser();
+  const { user, permissions } = useSessionUser();
   usePointerGlow();
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createDate, setCreateDate] = useState<Date | null>(null);
+
+  const openCreate = () => {
+    setCreateDate(defaultScheduleDate(new Date()));
+    setCreateOpen(true);
+  };
 
   const navItems = useMemo(() => {
     const items = [...BASE_NAV];
@@ -145,6 +155,12 @@ export function AppShell({ children }: AppShellProps) {
         </nav>
 
         <div className="sidebar__foot">
+          {user ? (
+            <div className="sidebar__user">
+              <span className="sidebar__user-name">{user.name}</span>
+              <span className="sidebar__user-role">{ROLE_LABELS[user.role]}</span>
+            </div>
+          ) : null}
           <button type="button" className="nav-link nav-btn" onClick={() => void logout()}>
             <LogoutIcon />
             Sair
@@ -158,9 +174,27 @@ export function AppShell({ children }: AppShellProps) {
             <BrandMark />
             <span>{BRAND_WORDMARK}</span>
           </Link>
+          {permissions.canCreate ? (
+            <button
+              type="button"
+              className="topbar__create-btn"
+              onClick={openCreate}
+              aria-label="Novo agendamento"
+            >
+              +
+            </button>
+          ) : null}
         </header>
         <main className="page">{children}</main>
       </div>
+
+      <CreateEntryDialog
+        open={createOpen}
+        initialScheduledAt={createDate}
+        defaultProjectId={null}
+        onClose={() => setCreateOpen(false)}
+        onSaved={() => { setCreateOpen(false); router.refresh(); }}
+      />
     </div>
   );
 }

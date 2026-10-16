@@ -46,6 +46,20 @@ type FormState = {
   aiBrief: string;
 };
 
+const STATUS_LABELS: Record<string, string> = {
+  DRAFT: "Rascunho",
+  SCHEDULED: "Agendado",
+  PUBLISHED: "Publicado",
+  FAILED: "Falhou",
+};
+
+const STATUS_BADGE_CLASS: Record<string, string> = {
+  DRAFT: "status-badge--draft",
+  SCHEDULED: "status-badge--scheduled",
+  PUBLISHED: "status-badge--published",
+  FAILED: "status-badge--failed",
+};
+
 function buildInitialForm(
   scheduledAt: Date | null,
   projectId = "",
@@ -101,6 +115,7 @@ export function PostModal({
     error: projectsError,
   } = useProjects({ enabled: open });
   const [linkInput, setLinkInput] = useState("");
+  const [postStatus, setPostStatus] = useState<string | null>(null);
   const [loadingPost, setLoadingPost] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -115,6 +130,7 @@ export function PostModal({
     setError(null);
     setLinkInput("");
     setPostProject(null);
+    setPostStatus(null);
     if (mode === "create") {
       setForm(buildInitialForm(initialScheduledAt, defaultProjectId ?? ""));
       return;
@@ -132,6 +148,7 @@ export function PostModal({
         }
         const post = (await response.json()) as PostCalendarItem;
         setPostProject(post.project);
+        setPostStatus(post.status ?? null);
         setForm(formFromPost(post));
       })
       .catch((fetchError: unknown) => {
@@ -482,14 +499,62 @@ export function PostModal({
                   }
                   required
                 />
+                {form.scheduledAtInput &&
+                  new Date(form.scheduledAtInput) < new Date() ? (
+                  <p className="field__hint field__hint--warn">
+                    Esta data já passou. O post será salvo mas estará atrasado.
+                  </p>
+                ) : null}
               </label>
             </fieldset>
 
             <fieldset className="form-section">
-              <legend className="form-section__legend">02 · Mídia</legend>
+              <legend className="form-section__legend">02 · Legenda e IA</legend>
+
+              <label className="field">
+                <span className="field__label">Legenda final</span>
+                <textarea
+                  className="field__textarea"
+                  rows={4}
+                  value={form.content}
+                  onChange={(event) => updateForm("content", event.target.value)}
+                  placeholder="Digite a legenda ou gere com IA abaixo."
+                  required
+                />
+              </label>
+
+              <div className="field field--ai">
+                <label className="field" htmlFor={`${formId}-brief`}>
+                  <span className="field__label">
+                    Briefing para IA (opcional) — descreva o que quer transmitir
+                  </span>
+                  <textarea
+                    id={`${formId}-brief`}
+                    className="field__textarea"
+                    rows={2}
+                    value={form.aiBrief}
+                    onChange={(event) => updateForm("aiBrief", event.target.value)}
+                    placeholder="Ex.: Quero destacar benefícios do produto e convidar para o site."
+                  />
+                </label>
+                <div>
+                  <button
+                    type="button"
+                    className="btn btn--primary"
+                    onClick={() => void handleGenerateCopy()}
+                    disabled={generating || submitting}
+                  >
+                    {generating ? "Gerando…" : "Gerar com IA"}
+                  </button>
+                </div>
+              </div>
+            </fieldset>
+
+            <fieldset className="form-section">
+              <legend className="form-section__legend">03 · Mídia</legend>
 
               <div className="field">
-                <span className="field__label">Upload ou links</span>
+                <span className="field__label">Upload ou links (opcional)</span>
                 <input
                   className="field__input"
                   type="file"
@@ -535,48 +600,6 @@ export function PostModal({
                   <p className="field__hint">Nenhuma mídia adicionada.</p>
                 )}
               </div>
-            </fieldset>
-
-            <fieldset className="form-section">
-              <legend className="form-section__legend">03 · Legenda e IA</legend>
-
-              <div className="field field--ai">
-                <label className="field" htmlFor={`${formId}-brief`}>
-                  <span className="field__label">
-                    Briefing para a IA — o que deseja transmitir
-                  </span>
-                  <textarea
-                    id={`${formId}-brief`}
-                    className="field__textarea"
-                    rows={3}
-                    value={form.aiBrief}
-                    onChange={(event) => updateForm("aiBrief", event.target.value)}
-                    placeholder="Ex.: Quero destacar benefícios do produto e convidar para o site."
-                  />
-                </label>
-                <div>
-                  <button
-                    type="button"
-                    className="btn btn--primary"
-                    onClick={() => void handleGenerateCopy()}
-                    disabled={generating || submitting}
-                  >
-                    {generating ? "Gerando…" : "Gerar com IA"}
-                  </button>
-                </div>
-              </div>
-
-              <label className="field">
-                <span className="field__label">Legenda final</span>
-                <textarea
-                  className="field__textarea"
-                  rows={8}
-                  value={form.content}
-                  onChange={(event) => updateForm("content", event.target.value)}
-                  placeholder="A legenda aparecerá aqui — você pode editar livremente."
-                  required
-                />
-              </label>
             </fieldset>
 
             {error ? (
@@ -633,6 +656,14 @@ export function PostModal({
           <div>
             <p className="eyebrow">{mode === "edit" ? "Edição" : "Planejamento"}</p>
             <h2 id={`${formId}-title`}>{title}</h2>
+            {mode === "edit" && postStatus ? (
+              <span
+                className={`status-badge ${STATUS_BADGE_CLASS[postStatus] ?? ""}`}
+                style={{ marginTop: "0.25rem", display: "inline-block" }}
+              >
+                {STATUS_LABELS[postStatus] ?? postStatus}
+              </span>
+            ) : null}
           </div>
           <button type="button" className="modal-panel__close" onClick={onClose}>
             Fechar

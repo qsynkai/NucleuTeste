@@ -156,7 +156,7 @@ export function ProjectModal({ open, project, onClose, onSaved }: ProjectModalPr
       >
         <header className="modal-panel__header">
           <div>
-            <p className="eyebrow">{isEdit ? "Edição" : "Nova conta"}</p>
+            <p className="eyebrow">{isEdit ? "Edição" : "Novo projeto"}</p>
             <h2 id={`${formId}-title`}>{isEdit ? "Editar projeto" : "Novo projeto"}</h2>
           </div>
           <button type="button" className="modal-panel__close" onClick={onClose}>

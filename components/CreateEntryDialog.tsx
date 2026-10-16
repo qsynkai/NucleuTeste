@@ -6,8 +6,9 @@ import { ReminderEntryForm } from "@/components/create-entry/reminder-entry-form
 import { PostModal } from "@/components/PostModal";
 import { CREATE_ENTRY_OPTIONS } from "@/lib/entries/create-entry-options";
 import { useModalA11y } from "@/hooks/use-modal-a11y";
+import { useProjects } from "@/hooks/use-projects";
 import type { EntryType } from "@prisma/client";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 
 type CreateEntryStep = "pick" | "form";
 
@@ -48,6 +49,11 @@ export function CreateEntryDialog({
   const titleId = useId();
   const panelRef = useRef<HTMLDialogElement>(null);
   useModalA11y(open, onClose, panelRef);
+  const { projects } = useProjects({ enabled: open && !!defaultProjectId });
+  const activeProjectName = useMemo(() => {
+    if (!defaultProjectId) return null;
+    return projects.find((p) => p.id === defaultProjectId)?.name ?? null;
+  }, [defaultProjectId, projects]);
 
   const [step, setStep] = useState<CreateEntryStep>("pick");
   const [entryType, setEntryType] = useState<EntryType | null>(null);
@@ -126,7 +132,7 @@ export function CreateEntryDialog({
           <div>
             {step === "pick" ? (
               <>
-                <p className="eyebrow">Agenda 360º</p>
+                <p className="eyebrow">Agenda 360º{activeProjectName ? ` · ${activeProjectName}` : ""}</p>
                 <h2 id={titleId}>Novo Registro na Agenda</h2>
                 <p className="create-entry-dialog__sub">
                   Escolha o tipo de registro. A data e o horário selecionados serão

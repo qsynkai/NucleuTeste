@@ -368,6 +368,53 @@ a { color: inherit; }
 
 .sidebar__foot { margin-top: auto; padding-top: 0.75rem; border-top: 1px solid var(--border); display: grid; gap: 3px; }
 
+.sidebar__user {
+  padding: 0.5rem 0.75rem;
+  display: grid;
+  gap: 1px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 3px;
+}
+.sidebar__user-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sidebar__user-role {
+  font-size: 0.7rem;
+  color: var(--text-3);
+  font-family: var(--f-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.topbar__create-btn {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  border: 1px solid var(--accent-line);
+  background: var(--accent-dim);
+  color: var(--accent);
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+.topbar__create-btn:hover {
+  background: var(--accent-mid);
+  box-shadow: var(--glow);
+}
+
+.field__hint--warn {
+  color: #fbbf24;
+}
+
 .nav-btn { width: 100%; border: 0; background: none; font-family: inherit; cursor: pointer; text-align: left; }
 
 .topbar { display: none; }
@@ -1679,6 +1726,27 @@ select.field__input { cursor: pointer; }
 .users-table td:has(.users-table__role-select) {
   position: relative;
   cursor: pointer;
+}
+
+/* Indica que o badge é clicável: mostra um chevron ▾ e destaca no hover */
+.users-table td:has(.users-table__role-select) .role-badge::after {
+  content: " ▾";
+  font-size: 0.6rem;
+  opacity: 0.5;
+  margin-left: 0.15rem;
+}
+
+.users-table td:has(.users-table__role-select):hover .role-badge {
+  border-color: var(--accent-line);
+  background: var(--accent-dim);
+  color: var(--accent-strong);
+}
+
+.users-table td:has(.users-table__role-select):focus-within .role-badge {
+  border-color: var(--accent-line);
+  background: var(--accent-dim);
+  outline: none;
+  box-shadow: var(--ring);
 }
 
 .users-table__actions {

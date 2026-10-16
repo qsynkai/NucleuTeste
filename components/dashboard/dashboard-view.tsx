@@ -3,6 +3,7 @@
 import { ChannelDistribution } from "@/components/dashboard/channel-distribution";
 import { DashboardSkeleton } from "@/components/dashboard/dashboard-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
+import { CreateEntryDialog } from "@/components/CreateEntryDialog";
 import { PostDetailsModal } from "@/components/PostDetailsModal";
 import { PostModal, type PostModalMode } from "@/components/PostModal";
 import { ChannelBadges } from "@/components/channel-badges";
@@ -162,6 +163,8 @@ export function DashboardView() {
   const [today, setToday] = useState<string | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [detailsPostId, setDetailsPostId] = useState<string | null>(null);
+  const [createEntryOpen, setCreateEntryOpen] = useState(false);
+  const [createEntryDate, setCreateEntryDate] = useState<Date | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<PostModalMode>("edit");
   const [formPostId, setFormPostId] = useState<string | null>(null);
@@ -259,10 +262,8 @@ export function DashboardView() {
   };
 
   const openCreate = () => {
-    setFormMode("create");
-    setFormPostId(null);
-    setFormInitialDate(defaultScheduleDate(new Date()));
-    setFormOpen(true);
+    setCreateEntryDate(defaultScheduleDate(new Date()));
+    setCreateEntryOpen(true);
   };
 
   const refreshAfterChange = () => void loadMetrics(true);
@@ -470,6 +471,14 @@ export function DashboardView() {
         onEdit={permissions.canCreate ? openEdit : undefined}
         canEdit={permissions.canCreate}
         canDelete={permissions.canDelete}
+      />
+
+      <CreateEntryDialog
+        open={createEntryOpen}
+        initialScheduledAt={createEntryDate}
+        defaultProjectId={projectId}
+        onClose={() => setCreateEntryOpen(false)}
+        onSaved={refreshAfterChange}
       />
 
       <PostModal
