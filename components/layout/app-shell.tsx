@@ -148,7 +148,7 @@ export function AppShell({ children }: AppShellProps) {
                 aria-current={active ? "page" : undefined}
               >
                 {item.icon}
-                {item.label}
+                <span className="nav-label">{item.label}</span>
               </Link>
             );
           })}
@@ -163,7 +163,7 @@ export function AppShell({ children }: AppShellProps) {
           ) : null}
           <button type="button" className="nav-link nav-btn" onClick={() => void logout()}>
             <LogoutIcon />
-            Sair
+            <span className="nav-label">Sair</span>
           </button>
         </div>
       </aside>
@@ -174,16 +174,26 @@ export function AppShell({ children }: AppShellProps) {
             <BrandMark />
             <span>{BRAND_WORDMARK}</span>
           </Link>
-          {permissions.canCreate ? (
-            <button
-              type="button"
-              className="topbar__create-btn"
-              onClick={openCreate}
-              aria-label="Novo agendamento"
-            >
-              +
+          <div className="topbar__right">
+            {permissions.canCreate ? (
+              <button
+                type="button"
+                className="topbar__create-btn"
+                onClick={openCreate}
+                aria-label="Novo agendamento"
+              >
+                +
+              </button>
+            ) : null}
+            {user ? (
+              <span className="topbar__avatar" aria-label={user.name} title={user.name}>
+                {user.name.charAt(0).toUpperCase()}
+              </span>
+            ) : null}
+            <button type="button" className="topbar__logout-btn" onClick={() => void logout()} aria-label="Sair">
+              <LogoutIcon />
             </button>
-          ) : null}
+          </div>
         </header>
         <main className="page">{children}</main>
       </div>
