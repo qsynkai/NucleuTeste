@@ -1,9 +1,9 @@
-import {
-  canManageUsers,
-} from "@/lib/auth/permissions";
+import { canManageUsers } from "@/lib/auth/permissions";
 import { forbidden, parseRole, requireUser } from "@/lib/auth/require-user";
 import { prisma } from "@/lib/prisma";
+import { findAvailableSlug, slugify } from "@/lib/projects/slug";
 import type { UserListItem, UsersListResponse } from "@/lib/types/user-api";
+import { Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 
@@ -66,7 +66,7 @@ export async function POST(
 
   if (!name || !email || password.length < 4) {
     return NextResponse.json(
-      { error: "Informe nome, e-mail e senha provisória (mín. 4 caracteres)." },
+      { error: "Informe nome, login e senha provisória (mín. 4 caracteres)." },
       { status: 400 },
     );
   }
@@ -77,22 +77,30 @@ export async function POST(
   const passwordHash = await bcrypt.hash(password, 12);
 
   try {
-    const created = await prisma.user.create({
-      data: {
-        name,
-        email,
-        passwordHash,
-        role,
-        isActive: true,
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        isActive: true,
-        createdAt: true,
-      },
+    const slugExists = async (slug: string) =>
+      (await prisma.project.count({ where: { slug } })) > 0;
+    const projectSlug = await findAvailableSlug(slugify(name), slugExists);
+
+    const created = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: { name, email, passwordHash, role, isActive: true },
+        select: {
+          id: true, name: true, email: true, role: true,
+          isActive: true, createdAt: true,
+        },
+      });
+
+      await tx.project.create({
+        data: {
+          name: "Geral",
+          slug: projectSlug,
+          type: "OTHER",
+          isActive: true,
+          ownerId: user.id,
+        },
+      });
+
+      return user;
     });
 
     return NextResponse.json(
@@ -106,10 +114,20 @@ export async function POST(
       },
       { status: 201 },
     );
-  } catch {
+  } catch (error: unknown) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      return NextResponse.json(
+        { error: "Esse login já está em uso por outro usuário." },
+        { status: 409 },
+      );
+    }
+    console.error("[POST /api/users]", error);
     return NextResponse.json(
-      { error: "Não foi possível cadastrar. E-mail já existe?" },
-      { status: 409 },
+      { error: "Não foi possível cadastrar o usuário." },
+      { status: 500 },
     );
   }
 }

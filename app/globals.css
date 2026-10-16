@@ -1650,6 +1650,95 @@ select.field__input { cursor: pointer; }
   background: rgba(255, 255, 255, 0.03);
 }
 
+/* ─── Users table: novos elementos ─────────────────────────────────── */
+
+.users-table__empty {
+  text-align: center;
+  color: var(--text-2);
+  padding: 2rem 1rem;
+}
+
+.users-table__name { font-weight: 550; }
+
+.users-table__login {
+  font-family: var(--f-mono);
+  font-size: 0.82rem;
+  color: var(--accent);
+}
+
+/* Selector inline de perfil — oculto visualmente, acessível via teclado */
+.users-table__role-select {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  width: 100%;
+  cursor: pointer;
+}
+
+/* Célula de perfil precisa de position:relative para sobrepor o select */
+.users-table td:has(.users-table__role-select) {
+  position: relative;
+  cursor: pointer;
+}
+
+.users-table__actions {
+  display: flex;
+  gap: 0.4rem;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+}
+
+/* Status dot */
+.status-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+}
+.status-dot::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+.status-dot--active::before  { background: #86efac; }
+.status-dot--inactive::before { background: rgba(255,255,255,0.2); }
+
+/* Botão de ação destrutiva com tom mais suave */
+.btn--danger-ghost {
+  border-color: rgba(248, 113, 113, 0.4);
+  color: #fca5a5;
+  background: rgba(248, 113, 113, 0.06);
+}
+.btn--danger-ghost:hover:not(:disabled) {
+  border-color: rgba(248, 113, 113, 0.7);
+  background: rgba(248, 113, 113, 0.12);
+}
+
+/* Botão destrutivo cheio (para confirmar desativação) */
+.btn--danger {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #fca5a5;
+}
+.btn--danger:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: rgba(239, 68, 68, 0.7);
+}
+
+/* Modal pequeno para confirmações */
+.modal-panel--sm {
+  width: min(440px, 94vw);
+}
+
+.modal-confirm__body {
+  padding: 1rem 1.5rem 0.5rem;
+  color: var(--text-2);
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+
 .tech-area {
   --tech-surface: #0a0c10;
   --tech-panel: #11141a;
