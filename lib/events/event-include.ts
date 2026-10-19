@@ -15,6 +15,12 @@ export const eventInclude = {
       user: { select: { id: true, name: true } },
     },
   },
+  participants: {
+    orderBy: { createdAt: "asc" as const },
+    include: {
+      user: { select: { id: true, name: true, email: true, role: true } },
+    },
+  },
 } satisfies Prisma.PostInclude;
 
 export type EventWithRelations = Prisma.PostGetPayload<{

@@ -74,6 +74,13 @@ enum ServiceChannel {
   OTHER
 }
 
+enum EventParticipantAccess {
+  VIEW
+  ADD_INFO
+  EDIT_CONTENT
+  UPDATE_STEPS
+}
+
 model User {
   id           String    @id @default(cuid())
   name         String
@@ -87,6 +94,7 @@ model User {
   projects     Project[]
   assignedEventTasks EventTask[]       @relation("EventTaskAssignee")
   eventStatusChanges   EventStatusHistory[]
+  eventParticipations  EventParticipant[]
 }
 
 model Project {
@@ -135,6 +143,9 @@ model Post {
   appointmentStatus  AppointmentStatus?
   tasks              EventTask[]
   statusHistory      EventStatusHistory[]
+  participants       EventParticipant[]
+  sharePreviewToken    String?   @unique
+  sharePreviewEnabled  Boolean   @default(false)
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
@@ -197,4 +208,19 @@ model EventStatusHistory {
 
   @@index([eventId, createdAt])
   @@index([userId])
+}
+
+model EventParticipant {
+  id          String                 @id @default(cuid())
+  eventId     String
+  event       Post                   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessLevel EventParticipantAccess @default(VIEW)
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+
+  @@unique([eventId, userId])
+  @@index([userId])
+  @@index([eventId])
 }

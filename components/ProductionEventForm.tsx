@@ -1,6 +1,11 @@
 "use client";
 
 import { EntryProjectField } from "@/components/create-entry/entry-project-field";
+import {
+  EventParticipantsField,
+  type ParticipantDraft,
+} from "@/components/events/event-participants-field";
+import { EventSharePreviewField } from "@/components/events/event-share-preview-field";
 import { useSessionUser } from "@/hooks/use-session-user";
 import type { TaskCatalogItem } from "@/app/api/task-catalog/route";
 import {
@@ -17,7 +22,11 @@ import {
   sumMoneyCents,
 } from "@/lib/money/brl";
 import { notifyError, notifySuccess } from "@/lib/notify";
-import type { EventListItem, ExternalLinkItem } from "@/lib/types/event-api";
+import type {
+  EventListItem,
+  EventSharePreviewMeta,
+  ExternalLinkItem,
+} from "@/lib/types/event-api";
 import type { EventStatus, Role } from "@prisma/client";
 import { useCallback, useEffect, useId, useMemo, useState } from "react";
 
@@ -115,6 +124,11 @@ export function ProductionEventForm({
   const [statusHistory, setStatusHistory] = useState<EventListItem["statusHistory"]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [participants, setParticipants] = useState<ParticipantDraft[]>([]);
+  const [sharePreview, setSharePreview] = useState<EventSharePreviewMeta>({
+    enabled: false,
+    url: null,
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -174,6 +188,13 @@ export function ProductionEventForm({
       );
       setCurrentStatus(event.currentStatus);
       setStatusHistory(event.statusHistory);
+      setParticipants(
+        event.participants.map((row) => ({
+          userId: row.userId,
+          accessLevel: row.accessLevel,
+        })),
+      );
+      setSharePreview(event.sharePreview);
       setRows(
         event.tasks.length
           ? event.tasks.map((task) => {
@@ -374,6 +395,7 @@ export function ProductionEventForm({
             tasks,
             mediaUrls,
             externalLinks,
+            participants,
           }),
         });
         const body = (await response.json()) as { error?: string };
@@ -394,6 +416,7 @@ export function ProductionEventForm({
             externalLinks,
             currentStatus,
             statusNotes: statusNotes.trim() || null,
+            participants,
           }),
         });
         const body = (await response.json()) as EventListItem | { error?: string };
@@ -696,6 +719,21 @@ export function ProductionEventForm({
           </div>
         </div>
       </fieldset>
+
+      <EventParticipantsField
+        value={participants}
+        onChange={setParticipants}
+        disabled={readOnly || submitting}
+      />
+
+      {mode === "edit" && eventId ? (
+        <EventSharePreviewField
+          eventId={eventId}
+          sharePreview={sharePreview}
+          disabled={readOnly}
+          onUpdated={setSharePreview}
+        />
+      ) : null}
 
       {error ? (
         <div className="calendar-alert" role="alert">

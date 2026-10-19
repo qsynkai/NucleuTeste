@@ -4,8 +4,6 @@ import {
 
   canDeleteEvent,
 
-  canEditEventContent,
-
   canEditProductionAssets,
 
   canUpdateEventStatus,
@@ -16,9 +14,11 @@ import {
 
 import { forbidden, requireUser } from "@/lib/auth/require-user";
 
+import { resolveEventAccess } from "@/lib/events/event-access";
 import { eventInclude } from "@/lib/events/event-include";
-
+import { syncEventParticipants } from "@/lib/events/sync-participants";
 import { serializeEvent } from "@/lib/events/serialize-event";
+import { parseEventParticipantsInput } from "@/lib/validators/event-participants";
 
 import { prisma } from "@/lib/prisma";
 
@@ -111,45 +111,17 @@ function parseExternalLinks(value: unknown): ExternalLinkItem[] | null {
 
 
 
-function canAccessEvent(
-
-  authUser: { id: string; role: string },
-
-  existing: Prisma.PostGetPayload<{ include: typeof eventInclude }>,
-
-): boolean {
-
-  const isOwner = existing.userId === authUser.id;
-
-  const techAccess =
-
-    canCompleteAssignedTasks({
-
-      id: authUser.id,
-
-      role: authUser.role as import("@prisma/client").Role,
-
-      isActive: true,
-
-    }) &&
-
-    existing.tasks.some(
-
-      (task) =>
-
-        task.assignedToUserId === authUser.id || authUser.role === "ADMIN",
-
-    );
-
-  return isOwner || techAccess || authUser.role === "ADMIN";
-
+function requestOrigin(request: Request): string | null {
+  try {
+    return new URL(request.url).origin;
+  } catch {
+    return null;
+  }
 }
-
-
 
 export async function GET(
 
-  _request: Request,
+  request: Request,
 
   context: RouteContext,
 
@@ -187,7 +159,9 @@ export async function GET(
 
 
 
-  if (!canAccessEvent(auth.user, existing)) {
+  const access = resolveEventAccess(auth.user, existing);
+
+  if (!access.canView) {
 
     return forbidden();
 
@@ -195,7 +169,7 @@ export async function GET(
 
 
 
-  return NextResponse.json(serializeEvent(existing));
+  return NextResponse.json(serializeEvent(existing, requestOrigin(request)));
 
 }
 
@@ -208,6 +182,7 @@ export async function PATCH(
   context: RouteContext,
 
 ): Promise<NextResponse<EventListItem | { error: string }>> {
+  const origin = requestOrigin(request);
 
   const auth = await requireUser();
 
@@ -269,9 +244,101 @@ export async function PATCH(
 
 
 
-    if (!canAccessEvent(auth.user, existing)) {
+    const access = resolveEventAccess(auth.user, existing);
+
+    if (!access.canView) {
 
       return forbidden();
+
+    }
+
+
+
+    if ("participants" in record) {
+
+      if (!access.canManageParticipants) {
+
+        return forbidden();
+
+      }
+
+      try {
+
+        const participants = parseEventParticipantsInput(
+
+          record.participants,
+
+          existing.userId,
+
+        );
+
+        await prisma.$transaction(async (tx) => {
+
+          await syncEventParticipants(
+            tx as import("@prisma/client").Prisma.TransactionClient,
+            id,
+            participants,
+          );
+
+        });
+
+      } catch (error: unknown) {
+
+        const message =
+
+          error instanceof Error ? error.message : "Participantes inválidos.";
+
+        if (message === "INVALID_PARTICIPANT") {
+
+          return NextResponse.json(
+
+            { error: "Um ou mais participantes são inválidos ou inativos." },
+
+            { status: 400 },
+
+          );
+
+        }
+
+        if (error instanceof TypeError) {
+
+          return NextResponse.json({ error: message }, { status: 400 });
+
+        }
+
+        throw error;
+
+      }
+
+      const onlyParticipants =
+
+        Object.keys(record).length === 1 ||
+
+        (Object.keys(record).length === 2 && "statusNotes" in record);
+
+      if (onlyParticipants) {
+
+        const refreshed = await prisma.post.findFirst({
+
+          where: { id },
+
+          include: eventInclude,
+
+        });
+
+        if (!refreshed) {
+
+          return NextResponse.json({ error: "Evento não encontrado." }, { status: 404 });
+
+        }
+
+        return NextResponse.json(
+
+          serializeEvent(refreshed, requestOrigin(request)),
+
+        );
+
+      }
 
     }
 
@@ -280,12 +347,36 @@ export async function PATCH(
     const isProduction = existing.entryType === "PRODUCTION_EVENT";
     const isCustomerService = existing.entryType === "CUSTOMER_SERVICE";
 
-    const canEditOwnedContent =
-      canEditEventContent(auth.user) &&
-      (existing.userId === auth.user.id || auth.user.role === "ADMIN");
+    const canEditContent = isProduction && access.canEditContent;
+    const canEditCustomer = isCustomerService && access.canEditContent;
 
-    const canEditContent = isProduction && canEditOwnedContent;
-    const canEditCustomer = isCustomerService && canEditOwnedContent;
+    if (
+
+      isCustomerService &&
+
+      !canEditCustomer &&
+
+      access.canAddInfo &&
+
+      "meetingNotes" in record &&
+
+      typeof record.meetingNotes === "string"
+
+    ) {
+
+      const updated = await prisma.post.update({
+
+        where: { id },
+
+        data: { meetingNotes: record.meetingNotes.trim() },
+
+        include: eventInclude,
+
+      });
+
+      return NextResponse.json(serializeEvent(updated, requestOrigin(request)));
+
+    }
 
     if (isCustomerService && canEditCustomer) {
       let patch;
@@ -320,7 +411,7 @@ export async function PATCH(
           });
         });
 
-        return NextResponse.json(serializeEvent(updated));
+        return NextResponse.json(serializeEvent(updated, origin));
       } catch (error: unknown) {
         if (error instanceof Error && error.message.startsWith("INVALID_")) {
           return NextResponse.json({ error: "Serviço ou preço inválido." }, { status: 400 });
@@ -511,7 +602,7 @@ export async function PATCH(
 
 
 
-      return NextResponse.json(serializeEvent(updated));
+      return NextResponse.json(serializeEvent(updated, origin));
 
     }
 
@@ -534,6 +625,8 @@ export async function PATCH(
       }
 
       if (
+
+        !access.canUpdateSteps ||
 
         !canUpdateEventStatus(auth.user, nextStatus, existing.currentStatus)
 
@@ -579,7 +672,11 @@ export async function PATCH(
 
     if ("taskCompletions" in record && Array.isArray(record.taskCompletions)) {
 
-      if (!canCompleteAssignedTasks(auth.user)) return forbidden();
+      if (!access.canUpdateSteps && !canCompleteAssignedTasks(auth.user)) {
+
+        return forbidden();
+
+      }
 
       const taskIds = record.taskCompletions.filter(
 
@@ -667,7 +764,7 @@ export async function PATCH(
 
 
 
-    return NextResponse.json(serializeEvent(updated));
+    return NextResponse.json(serializeEvent(updated, origin));
 
   } catch (error: unknown) {
 

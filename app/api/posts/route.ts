@@ -5,10 +5,12 @@ import { databaseUnavailableResponse } from "@/lib/prisma/database-unavailable-r
 import { isDatabaseUnavailable } from "@/lib/prisma/is-database-unavailable";
 import { postInclude } from "@/lib/posts/post-include";
 import { serializePost } from "@/lib/posts/serialize-post";
+import { syncEventParticipants } from "@/lib/events/sync-participants";
+import { postsVisibleWhere } from "@/lib/posts/visibility";
 import { requireOwnedProject } from "@/lib/projects/access";
+import { parseEventParticipantsInput } from "@/lib/validators/event-participants";
 import type { PostCalendarItem, PostsListResponse } from "@/lib/types/post-api";
 import { parsePostPayload } from "@/lib/validators/post-api";
-import type { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 
 export async function GET(
@@ -21,18 +23,14 @@ export async function GET(
     new URL(request.url).searchParams.get("projectId")?.trim() || null;
 
   try {
-    let where: Prisma.PostWhereInput;
-
     if (projectId) {
       const access = await requireOwnedProject(auth.user.id, projectId, {
         allowArchived: true,
       });
       if (!access.ok) return access.response;
-      where = { userId: auth.user.id, projectId };
-    } else {
-      // Visão global: todos os projetos ativos do usuário.
-      where = { userId: auth.user.id, project: { isActive: true } };
     }
+
+    const where = postsVisibleWhere(auth.user.id, projectId);
 
     const rows = await prisma.post.findMany({
       where,
@@ -77,26 +75,52 @@ export async function POST(
     return NextResponse.json({ error: message }, { status: 400 });
   }
 
+  const record =
+    body && typeof body === "object" && !Array.isArray(body)
+      ? (body as Record<string, unknown>)
+      : {};
+
+  let participants;
+  try {
+    participants = parseEventParticipantsInput(
+      record.participants,
+      auth.user.id,
+    );
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Participantes inválidos.";
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
+
   try {
     const access = await requireOwnedProject(auth.user.id, payload.projectId, {
       allowArchived: false,
     });
     if (!access.ok) return access.response;
 
-    const created = await prisma.post.create({
-      data: {
-        title: payload.title,
-        content: payload.content,
-        scheduledAt: payload.scheduledAt,
-        status: "SCHEDULED",
-        mediaUrls: payload.mediaUrls,
-        userId: auth.user.id,
-        projectId: access.project.id,
-        channels: {
-          create: payload.channels.map((channel) => ({ channel })),
+    const created = await prisma.$transaction(async (tx) => {
+      const post = await tx.post.create({
+        data: {
+          title: payload.title,
+          content: payload.content,
+          scheduledAt: payload.scheduledAt,
+          status: "SCHEDULED",
+          mediaUrls: payload.mediaUrls,
+          userId: auth.user.id,
+          projectId: access.project.id,
+          channels: {
+            create: payload.channels.map((channel) => ({ channel })),
+          },
         },
-      },
-      include: postInclude,
+        include: postInclude,
+      });
+      if (participants.length > 0) {
+        await syncEventParticipants(
+          tx as import("@prisma/client").Prisma.TransactionClient,
+          post.id,
+          participants,
+        );
+      }
+      return post;
     });
 
     return NextResponse.json(serializePost(created), { status: 201 });

@@ -4,7 +4,10 @@ import {
 } from "@/lib/auth/permissions";
 import { forbidden, requireUser } from "@/lib/auth/require-user";
 import { eventInclude } from "@/lib/events/event-include";
+import { syncEventParticipants } from "@/lib/events/sync-participants";
 import { serializeEvent } from "@/lib/events/serialize-event";
+import { parseEventParticipantsInput } from "@/lib/validators/event-participants";
+import { postsVisibleWhere } from "@/lib/posts/visibility";
 import { isTechnicalProductionTask } from "@/lib/events/tech-filter";
 import { prisma } from "@/lib/prisma";
 import { requireOwnedProject } from "@/lib/projects/access";
@@ -68,7 +71,7 @@ export async function GET(
               tasks: { some: technicalTaskFilter },
             };
     } else {
-      where = { userId: auth.user.id };
+      where = postsVisibleWhere(auth.user.id, null);
     }
 
     const rows = await prisma.post.findMany({
@@ -78,7 +81,7 @@ export async function GET(
     });
 
     const events: EventListItem[] = rows
-      .map(serializeEvent)
+      .map((row) => serializeEvent(row))
       .filter((event) => {
         if (scope !== "tech") return true;
         if (
@@ -134,6 +137,17 @@ export async function POST(
         : parseEventCreateBody(body, entryType);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Dados inválidos.";
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
+
+  let participants;
+  try {
+    participants = parseEventParticipantsInput(
+      record.participants,
+      auth.user.id,
+    );
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Participantes inválidos.";
     return NextResponse.json({ error: message }, { status: 400 });
   }
 
@@ -198,10 +212,22 @@ export async function POST(
         },
       });
 
-      return post;
+      if (participants.length > 0) {
+        await syncEventParticipants(
+          tx as import("@prisma/client").Prisma.TransactionClient,
+          post.id,
+          participants,
+        );
+      }
+
+      return tx.post.findFirstOrThrow({
+        where: { id: post.id },
+        include: eventInclude,
+      });
     });
 
-    return NextResponse.json(serializeEvent(created), { status: 201 });
+    const origin = new URL(request.url).origin;
+    return NextResponse.json(serializeEvent(created, origin), { status: 201 });
   } catch (error: unknown) {
     console.error("[POST /api/events]", error);
     return NextResponse.json(

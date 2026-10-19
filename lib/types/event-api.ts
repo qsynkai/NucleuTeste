@@ -2,7 +2,9 @@ import type {
   AppointmentStatus,
   AttendanceType,
   EntryType,
+  EventParticipantAccess,
   EventStatus,
+  Role,
   ServiceChannel,
 } from "@prisma/client";
 import type { PostCalendarItem } from "@/lib/types/post-api";
@@ -30,6 +32,17 @@ export type EventStatusHistoryItem = {
   user: { id: string; name: string };
 };
 
+export type EventParticipantItem = {
+  userId: string;
+  accessLevel: EventParticipantAccess;
+  user: { id: string; name: string; email: string; role: Role };
+};
+
+export type EventSharePreviewMeta = {
+  enabled: boolean;
+  url: string | null;
+};
+
 export type EventListItem = Omit<PostCalendarItem, "tasks"> & {
   entryType: EntryType;
   currentStatus: EventStatus;
@@ -46,6 +59,8 @@ export type EventListItem = Omit<PostCalendarItem, "tasks"> & {
   externalLinks: ExternalLinkItem[];
   tasks: EventTaskItem[];
   statusHistory: EventStatusHistoryItem[];
+  participants: EventParticipantItem[];
+  sharePreview: EventSharePreviewMeta;
 };
 
 export type EventsListResponse = {

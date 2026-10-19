@@ -1,5 +1,6 @@
-import type { EventListItem, ExternalLinkItem } from "@/lib/types/event-api";
+import { buildSharePreviewPath } from "@/lib/events/share-preview-token";
 import type { EventWithRelations } from "@/lib/events/event-include";
+import type { EventListItem, ExternalLinkItem } from "@/lib/types/event-api";
 import { serializePost } from "@/lib/posts/serialize-post";
 import type { Prisma } from "@prisma/client";
 
@@ -22,8 +23,18 @@ function parseExternalLinks(value: Prisma.JsonValue | null): ExternalLinkItem[] 
     }));
 }
 
-export function serializeEvent(post: EventWithRelations): EventListItem {
+export function serializeEvent(
+  post: EventWithRelations,
+  requestOrigin?: string | null,
+): EventListItem {
   const base = serializePost(post);
+  const shareUrl =
+    post.sharePreviewEnabled && post.sharePreviewToken
+      ? requestOrigin
+        ? `${requestOrigin}${buildSharePreviewPath(post.sharePreviewToken)}`
+        : buildSharePreviewPath(post.sharePreviewToken)
+      : null;
+
   return {
     ...base,
     entryType: post.entryType,
@@ -54,5 +65,19 @@ export function serializeEvent(post: EventWithRelations): EventListItem {
       notes: entry.notes,
       user: { id: entry.user.id, name: entry.user.name },
     })),
+    participants: post.participants.map((row) => ({
+      userId: row.userId,
+      accessLevel: row.accessLevel,
+      user: {
+        id: row.user.id,
+        name: row.user.name,
+        email: row.user.email,
+        role: row.user.role,
+      },
+    })),
+    sharePreview: {
+      enabled: post.sharePreviewEnabled,
+      url: shareUrl,
+    },
   };
 }

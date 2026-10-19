@@ -2,6 +2,10 @@
 
 import { EntryProjectField } from "@/components/create-entry/entry-project-field";
 import {
+  EventParticipantsField,
+  type ParticipantDraft,
+} from "@/components/events/event-participants-field";
+import {
   defaultScheduleDate,
   parseLocalDateTimeInput,
   toLocalDateTimeInputValue,
@@ -31,6 +35,7 @@ export function ReminderEntryForm({
   );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [participants, setParticipants] = useState<ParticipantDraft[]>([]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -65,6 +70,7 @@ export function ReminderEntryForm({
           content: notes.trim(),
           scheduledAt: scheduledAt.toISOString(),
           mediaUrls: [],
+          participants,
         }),
       });
       const body = (await response.json()) as { error?: string };
@@ -122,6 +128,12 @@ export function ReminderEntryForm({
           placeholder="Detalhes rápidos para a equipe."
         />
       </label>
+
+      <EventParticipantsField
+        value={participants}
+        onChange={setParticipants}
+        disabled={submitting}
+      />
 
       {error ? (
         <div className="calendar-alert" role="alert">

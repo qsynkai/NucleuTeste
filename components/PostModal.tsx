@@ -1,6 +1,11 @@
 "use client";
 
 import { ChannelPicker } from "@/components/channel-picker";
+import {
+  EventParticipantsField,
+  type ParticipantDraft,
+} from "@/components/events/event-participants-field";
+import { EventSharePreviewField } from "@/components/events/event-share-preview-field";
 import { ProjectAvatar } from "@/components/projects/project-avatar";
 import { useProjects } from "@/hooks/use-projects";
 import { fetchWithRetry } from "@/lib/api/fetch-with-retry";
@@ -13,6 +18,7 @@ import {
   toLocalDateTimeInputValue,
 } from "@/lib/datetime/local-input";
 import { notifyError, notifySuccess } from "@/lib/notify";
+import type { EventListItem, EventSharePreviewMeta } from "@/lib/types/event-api";
 import type { PostCalendarItem } from "@/lib/types/post-api";
 import type { SocialChannel } from "@prisma/client";
 import { useModalA11y } from "@/hooks/use-modal-a11y";
@@ -120,6 +126,11 @@ export function PostModal({
   const [submitting, setSubmitting] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [participants, setParticipants] = useState<ParticipantDraft[]>([]);
+  const [sharePreview, setSharePreview] = useState<EventSharePreviewMeta>({
+    enabled: false,
+    url: null,
+  });
 
   const title = useMemo(
     () => (mode === "edit" ? "Editar agendamento" : "Novo agendamento"),
@@ -133,6 +144,8 @@ export function PostModal({
     setPostStatus(null);
     if (mode === "create") {
       setForm(buildInitialForm(initialScheduledAt, defaultProjectId ?? ""));
+      setParticipants([]);
+      setSharePreview({ enabled: false, url: null });
       return;
     }
     if (!postId) {
@@ -141,15 +154,31 @@ export function PostModal({
     }
 
     setLoadingPost(true);
-    void fetchWithRetry(`/api/posts/${postId}`, { cache: "no-store" })
-      .then(async (response) => {
-        if (!response.ok) {
+    void Promise.all([
+      fetchWithRetry(`/api/posts/${postId}`, { cache: "no-store" }),
+      fetchWithRetry(`/api/events/${postId}`, { cache: "no-store" }),
+    ])
+      .then(async ([postRes, eventRes]) => {
+        if (!postRes.ok) {
           throw new Error("Não foi possível carregar a postagem.");
         }
-        const post = (await response.json()) as PostCalendarItem;
+        const post = (await postRes.json()) as PostCalendarItem;
         setPostProject(post.project);
         setPostStatus(post.status ?? null);
         setForm(formFromPost(post));
+        if (eventRes.ok) {
+          const event = (await eventRes.json()) as EventListItem;
+          setParticipants(
+            event.participants.map((row) => ({
+              userId: row.userId,
+              accessLevel: row.accessLevel,
+            })),
+          );
+          setSharePreview(event.sharePreview);
+        } else {
+          setParticipants([]);
+          setSharePreview({ enabled: false, url: null });
+        }
       })
       .catch((fetchError: unknown) => {
         const message =
@@ -380,7 +409,7 @@ export function PostModal({
       const response = await fetch(isEdit ? `/api/posts/${postId}` : "/api/posts", {
         method: isEdit ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ ...payload, participants }),
       });
 
       const body = (await response.json()) as { error?: string };
@@ -601,6 +630,20 @@ export function PostModal({
                 )}
               </div>
             </fieldset>
+
+            <EventParticipantsField
+              value={participants}
+              onChange={setParticipants}
+              disabled={submitting || loadingPost}
+            />
+
+            {mode === "edit" && postId ? (
+              <EventSharePreviewField
+                eventId={postId}
+                sharePreview={sharePreview}
+                onUpdated={setSharePreview}
+              />
+            ) : null}
 
             {error ? (
               <div className="calendar-alert" role="alert">

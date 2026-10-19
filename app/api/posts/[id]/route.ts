@@ -1,6 +1,10 @@
 import { canDeleteEvent, canEditEventContent } from "@/lib/auth/permissions";
 import { forbidden, requireUser } from "@/lib/auth/require-user";
+import { canViewEvent } from "@/lib/events/event-access";
+import { eventInclude } from "@/lib/events/event-include";
+import { syncEventParticipants } from "@/lib/events/sync-participants";
 import { prisma } from "@/lib/prisma";
+import { parseEventParticipantsInput } from "@/lib/validators/event-participants";
 import { postInclude } from "@/lib/posts/post-include";
 import { serializePost } from "@/lib/posts/serialize-post";
 import { requireOwnedProject } from "@/lib/projects/access";
@@ -32,11 +36,11 @@ export async function GET(
 
   try {
     const post = await prisma.post.findFirst({
-      where: { id, userId: auth.user.id },
-      include: postInclude,
+      where: { id },
+      include: eventInclude,
     });
 
-    if (!post) {
+    if (!post || !canViewEvent(auth.user, post)) {
       return NextResponse.json(
         { error: "Postagem não encontrada." },
         { status: 404 },
@@ -85,7 +89,7 @@ export async function PUT(
   try {
     const owned = await prisma.post.findFirst({
       where: { id, userId: auth.user.id },
-      select: { id: true, projectId: true },
+      select: { id: true, projectId: true, userId: true },
     });
     if (!owned) {
       return NextResponse.json(
@@ -100,9 +104,25 @@ export async function PUT(
     });
     if (!access.ok) return access.response;
 
+    const record =
+      body && typeof body === "object" && !Array.isArray(body)
+        ? (body as Record<string, unknown>)
+        : {};
+    let participants;
+    try {
+      participants = parseEventParticipantsInput(
+        record.participants,
+        owned.userId,
+      );
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Participantes inválidos.";
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
+
     const updated = await prisma.$transaction(async (tx) => {
       await tx.postChannel.deleteMany({ where: { postId: id } });
-      return tx.post.update({
+      const post = await tx.post.update({
         where: { id },
         data: {
           title: payload.title,
@@ -117,6 +137,14 @@ export async function PUT(
         },
         include: postInclude,
       });
+      if ("participants" in record) {
+        await syncEventParticipants(
+          tx as import("@prisma/client").Prisma.TransactionClient,
+          id,
+          participants,
+        );
+      }
+      return post;
     });
 
     return NextResponse.json(serializePost(updated));

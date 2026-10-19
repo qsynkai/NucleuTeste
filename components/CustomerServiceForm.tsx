@@ -1,6 +1,11 @@
 "use client";
 
 import { EntryProjectField } from "@/components/create-entry/entry-project-field";
+import {
+  EventParticipantsField,
+  type ParticipantDraft,
+} from "@/components/events/event-participants-field";
+import { EventSharePreviewField } from "@/components/events/event-share-preview-field";
 import type { TaskCatalogItem } from "@/app/api/task-catalog/route";
 import {
   APPOINTMENT_STATUS_FLOW,
@@ -18,7 +23,7 @@ import {
   phoneToWhatsAppDigits,
 } from "@/lib/phone/mask-br";
 import { notifyError, notifySuccess } from "@/lib/notify";
-import type { EventListItem } from "@/lib/types/event-api";
+import type { EventListItem, EventSharePreviewMeta } from "@/lib/types/event-api";
 import type { AppointmentStatus, AttendanceType, ServiceChannel } from "@prisma/client";
 import { useCallback, useEffect, useId, useMemo, useState } from "react";
 
@@ -109,6 +114,11 @@ export function CustomerServiceForm({
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [loadingEvent, setLoadingEvent] = useState(mode === "edit");
   const [error, setError] = useState<string | null>(null);
+  const [participants, setParticipants] = useState<ParticipantDraft[]>([]);
+  const [sharePreview, setSharePreview] = useState<EventSharePreviewMeta>({
+    enabled: false,
+    url: null,
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -168,6 +178,13 @@ export function CustomerServiceForm({
       setAssignedProfessional(event.assignedProfessional ?? "");
       setDurationMinutes(event.durationMinutes ?? 30);
       setAppointmentStatus(event.appointmentStatus ?? "SCHEDULED");
+      setParticipants(
+        event.participants.map((row) => ({
+          userId: row.userId,
+          accessLevel: row.accessLevel,
+        })),
+      );
+      setSharePreview(event.sharePreview);
       if (event.scheduledAt) {
         setStartInput(toLocalDateTimeInputValue(new Date(event.scheduledAt)));
       }
@@ -279,7 +296,7 @@ export function CustomerServiceForm({
         const response = await fetch("/api/events", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(buildCreateBody()),
+          body: JSON.stringify({ ...buildCreateBody(), participants }),
         });
         const body = (await response.json()) as { error?: string };
         if (!response.ok) throw new Error(body.error ?? "Não foi possível salvar.");
@@ -288,7 +305,7 @@ export function CustomerServiceForm({
         const response = await fetch(`/api/events/${eventId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(buildPatchBody()),
+          body: JSON.stringify({ ...buildPatchBody(), participants }),
         });
         const body = (await response.json()) as EventListItem | { error?: string };
         if (!response.ok) {
@@ -634,6 +651,20 @@ export function CustomerServiceForm({
           ))}
         </div>
       </fieldset>
+
+      <EventParticipantsField
+        value={participants}
+        onChange={setParticipants}
+        disabled={submitting || statusUpdating}
+      />
+
+      {mode === "edit" && eventId ? (
+        <EventSharePreviewField
+          eventId={eventId}
+          sharePreview={sharePreview}
+          onUpdated={setSharePreview}
+        />
+      ) : null}
 
       {error ? (
         <div className="calendar-alert" role="alert">
