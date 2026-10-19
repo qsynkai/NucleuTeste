@@ -2523,6 +2523,15 @@ select.field__input { cursor: pointer; }
   color: var(--muted);
 }
 
+/* Portal interno do Next (só em desenvolvimento): evita afetar layout da agenda. */
+nextjs-portal {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
 @media (max-width: 640px) {
   .production-event-form__datetime {
     grid-template-columns: 1fr;
