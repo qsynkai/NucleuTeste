@@ -7,6 +7,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PostDetailsModal } from "@/components/PostDetailsModal";
 import { CreateEntryDialog } from "@/components/CreateEntryDialog";
 import { PostModal, type PostModalMode } from "@/components/PostModal";
+import { ProductionEventForm } from "@/components/ProductionEventForm";
+import { CustomerServiceForm } from "@/components/CustomerServiceForm";
 import { ProjectStrip } from "@/components/projects/project-strip";
 import { useProjects } from "@/hooks/use-projects";
 import { useSelectedProject } from "@/hooks/use-selected-project";
@@ -27,6 +29,7 @@ import { readApiErrorMessage } from "@/lib/api/read-api-error";
 import { fetchWithRetry } from "@/lib/api/fetch-with-retry";
 import { notifyNetworkError } from "@/lib/notify";
 import type { PostCalendarItem, PostsListResponse } from "@/lib/types/post-api";
+import type { EntryType } from "@prisma/client";
 import type {
   DateSelectArg,
   DatesSetArg,
@@ -71,6 +74,11 @@ export function CalendarView() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [detailsPostId, setDetailsPostId] = useState<string | null>(null);
   const [rescheduleError, setRescheduleError] = useState<string | null>(null);
+  // Modais de edição para tipos não-social
+  const [productionEditOpen, setProductionEditOpen] = useState(false);
+  const [productionEditId, setProductionEditId] = useState<string | null>(null);
+  const [customerServiceEditOpen, setCustomerServiceEditOpen] = useState(false);
+  const [customerServiceEditId, setCustomerServiceEditId] = useState<string | null>(null);
 
   useEffect(() => {
     const stored = loadCalendarPreferences();
@@ -247,12 +255,21 @@ export function CalendarView() {
     setDetailsOpen(true);
   }, []);
 
-  const openEditModal = useCallback((postId: string) => {
+  const openEditModal = useCallback((postId: string, entryType: EntryType = "SOCIAL_POST") => {
     setDetailsOpen(false);
-    setFormModalMode("edit");
-    setFormPostId(postId);
-    setInitialScheduledAt(null);
-    setFormModalOpen(true);
+    if (entryType === "PRODUCTION_EVENT") {
+      setProductionEditId(postId);
+      setProductionEditOpen(true);
+    } else if (entryType === "CUSTOMER_SERVICE") {
+      setCustomerServiceEditId(postId);
+      setCustomerServiceEditOpen(true);
+    } else {
+      // SOCIAL_POST e SIMPLE_REMINDER usam PostModal
+      setFormModalMode("edit");
+      setFormPostId(postId);
+      setInitialScheduledAt(null);
+      setFormModalOpen(true);
+    }
   }, []);
 
   const handleDateClick = useCallback(
@@ -520,6 +537,70 @@ export function CalendarView() {
         onClose={() => setFormModalOpen(false)}
         onSaved={() => void loadPosts({ silent: true })}
       />
+
+      {/* Modal de edição de Evento de Produção */}
+      {productionEditOpen && productionEditId ? (
+        <div className="modal-backdrop" role="presentation" onClick={() => setProductionEditOpen(false)}>
+          <dialog
+            className="modal-panel modal-panel--wide post-modal"
+            open
+            aria-modal="true"
+            aria-label="Editar evento de produção"
+            onClick={(e) => e.stopPropagation()}
+            onCancel={(e) => { e.preventDefault(); setProductionEditOpen(false); }}
+          >
+            <header className="modal-panel__header">
+              <div>
+                <p className="eyebrow">Evento / produção</p>
+                <h2>Editar evento de produção</h2>
+              </div>
+              <button type="button" className="modal-panel__close" onClick={() => setProductionEditOpen(false)}>
+                Fechar
+              </button>
+            </header>
+            <ProductionEventForm
+              mode="edit"
+              eventId={productionEditId}
+              initialScheduledAt={null}
+              embedded={false}
+              onSaved={() => { setProductionEditOpen(false); void loadPosts({ silent: true }); }}
+              onCancel={() => setProductionEditOpen(false)}
+            />
+          </dialog>
+        </div>
+      ) : null}
+
+      {/* Modal de edição de Atendimento */}
+      {customerServiceEditOpen && customerServiceEditId ? (
+        <div className="modal-backdrop" role="presentation" onClick={() => setCustomerServiceEditOpen(false)}>
+          <dialog
+            className="modal-panel modal-panel--wide post-modal"
+            open
+            aria-modal="true"
+            aria-label="Editar atendimento"
+            onClick={(e) => e.stopPropagation()}
+            onCancel={(e) => { e.preventDefault(); setCustomerServiceEditOpen(false); }}
+          >
+            <header className="modal-panel__header">
+              <div>
+                <p className="eyebrow">Atendimento</p>
+                <h2>Editar atendimento</h2>
+              </div>
+              <button type="button" className="modal-panel__close" onClick={() => setCustomerServiceEditOpen(false)}>
+                Fechar
+              </button>
+            </header>
+            <CustomerServiceForm
+              mode="edit"
+              eventId={customerServiceEditId}
+              initialScheduledAt={null}
+              embedded={false}
+              onSaved={() => { setCustomerServiceEditOpen(false); void loadPosts({ silent: true }); }}
+              onCancel={() => setCustomerServiceEditOpen(false)}
+            />
+          </dialog>
+        </div>
+      ) : null}
     </section>
   );
 }

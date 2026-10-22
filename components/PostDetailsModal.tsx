@@ -7,7 +7,7 @@ import { downloadMediaUrl, isImageUrl, isVideoUrl } from "@/lib/media/download-c
 import { POST_STATUS_LABELS, postStatusBadgeClassName } from "@/lib/posts/status-meta";
 import { notifyError, notifySuccess } from "@/lib/notify";
 import type { PostCalendarItem } from "@/lib/types/post-api";
-import type { PostStatus } from "@prisma/client";
+import type { EntryType, PostStatus } from "@prisma/client";
 import { useModalA11y } from "@/hooks/use-modal-a11y";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 
@@ -19,7 +19,8 @@ type PostDetailsModalProps = {
   onClose: () => void;
   onUpdated: (post?: PostCalendarItem) => void;
   onDeleted: () => void;
-  onEdit?: (postId: string) => void;
+  /** Recebe o id e o tipo de entrada para rotear para o formulário correto. */
+  onEdit?: (postId: string, entryType: EntryType) => void;
   canEdit?: boolean;
   canDelete?: boolean;
 };
@@ -281,7 +282,7 @@ export function PostDetailsModal({
                   </button>
                 ) : null}
                 {onEdit && canEdit ? (
-                  <button type="button" className="btn btn--ghost" disabled={busy} onClick={() => onEdit(post.id)}>
+                  <button type="button" className="btn btn--ghost" disabled={busy} onClick={() => onEdit(post.id, post.entryType)}>
                     Editar
                   </button>
                 ) : null}

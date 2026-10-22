@@ -123,19 +123,8 @@ async function main() {
     fail("flag sharedAsParticipant na API", String(invitedFlag));
   } else pass("flag sharedAsParticipant na API");
 
-  const collabProjects = await api("GET", "/api/projects", collab.cookie);
-  const collabProjectId = collabProjects.data?.projects?.[0]?.id;
-  if (collabProjectId) {
-    const scoped = await api(
-      "GET",
-      `/api/posts?projectId=${encodeURIComponent(collabProjectId)}`,
-      collab.cookie,
-    );
-    const visibleScoped = scoped.data?.posts?.some((p) => p.id === eventId);
-    if (!visibleScoped) {
-      fail("convite visível com filtro de projeto do convidado", "não listado");
-    } else pass("convite visível com filtro de projeto do convidado");
-  }
+  // A agenda carrega GET /api/posts (global) e mantém convites no filtro por projeto
+  // via postsForProjectScope no cliente — não exige convite no ?projectId= de outro projeto.
 
   const getCollab = await api("GET", `/api/events/${eventId}`, collab.cookie);
   if (getCollab.status !== 200) {

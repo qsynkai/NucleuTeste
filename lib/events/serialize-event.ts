@@ -26,8 +26,9 @@ function parseExternalLinks(value: Prisma.JsonValue | null): ExternalLinkItem[] 
 export function serializeEvent(
   post: EventWithRelations,
   requestOrigin?: string | null,
+  viewerUserId?: string,
 ): EventListItem {
-  const base = serializePost(post);
+  const base = serializePost(post, viewerUserId);
   const shareUrl =
     post.sharePreviewEnabled && post.sharePreviewToken
       ? requestOrigin

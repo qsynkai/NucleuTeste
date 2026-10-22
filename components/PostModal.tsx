@@ -131,6 +131,8 @@ export function PostModal({
     enabled: false,
     url: null,
   });
+  // Guarda o entryType do post carregado em edição para ajustar validações.
+  const [loadedEntryType, setLoadedEntryType] = useState<string>("SOCIAL_POST");
 
   const title = useMemo(
     () => (mode === "edit" ? "Editar agendamento" : "Novo agendamento"),
@@ -146,6 +148,7 @@ export function PostModal({
       setForm(buildInitialForm(initialScheduledAt, defaultProjectId ?? ""));
       setParticipants([]);
       setSharePreview({ enabled: false, url: null });
+      setLoadedEntryType("SOCIAL_POST");
       return;
     }
     if (!postId) {
@@ -165,6 +168,7 @@ export function PostModal({
         const post = (await postRes.json()) as PostCalendarItem;
         setPostProject(post.project);
         setPostStatus(post.status ?? null);
+        setLoadedEntryType(post.entryType ?? "SOCIAL_POST");
         setForm(formFromPost(post));
         if (eventRes.ok) {
           const event = (await eventRes.json()) as EventListItem;
@@ -376,7 +380,8 @@ export function PostModal({
       setError("Informe o título/tema do post.");
       return;
     }
-    if (form.channels.length === 0) {
+    // Canais são obrigatórios apenas para postagens sociais.
+    if (loadedEntryType === "SOCIAL_POST" && form.channels.length === 0) {
       setError("Selecione ao menos uma rede de destino.");
       return;
     }

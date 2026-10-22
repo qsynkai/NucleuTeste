@@ -81,7 +81,7 @@ export async function GET(
     });
 
     const events: EventListItem[] = rows
-      .map((row) => serializeEvent(row))
+      .map((row) => serializeEvent(row, null, auth.user.id))
       .filter((event) => {
         if (scope !== "tech") return true;
         if (
@@ -227,7 +227,7 @@ export async function POST(
     });
 
     const origin = new URL(request.url).origin;
-    return NextResponse.json(serializeEvent(created, origin), { status: 201 });
+    return NextResponse.json(serializeEvent(created, origin, auth.user.id), { status: 201 });
   } catch (error: unknown) {
     console.error("[POST /api/events]", error);
     return NextResponse.json(

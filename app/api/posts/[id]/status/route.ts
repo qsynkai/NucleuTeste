@@ -47,9 +47,13 @@ export async function PATCH(
     return NextResponse.json({ error: message }, { status: 400 });
   }
 
+  // ADMIN pode atualizar status de qualquer post; demais usuários, apenas os próprios.
+  const ownFilter =
+    auth.user.role === "ADMIN" ? { id } : { id, userId: auth.user.id };
+
   try {
     const updated = await prisma.post.updateMany({
-      where: { id, userId: auth.user.id },
+      where: ownFilter,
       data: { status },
     });
     if (updated.count === 0) {
@@ -60,7 +64,7 @@ export async function PATCH(
     }
 
     const post = await prisma.post.findFirst({
-      where: { id, userId: auth.user.id },
+      where: { id },
       include: postInclude,
     });
     if (!post) {

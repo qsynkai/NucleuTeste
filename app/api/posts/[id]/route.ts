@@ -87,8 +87,14 @@ export async function PUT(
   }
 
   try {
+    // ADMIN pode editar qualquer post; demais usuários, apenas os próprios.
+    const ownedWhere =
+      auth.user.role === "ADMIN"
+        ? { id }
+        : { id, userId: auth.user.id };
+
     const owned = await prisma.post.findFirst({
-      where: { id, userId: auth.user.id },
+      where: ownedWhere,
       select: { id: true, projectId: true, userId: true },
     });
     if (!owned) {
@@ -98,8 +104,9 @@ export async function PUT(
       );
     }
 
-    // Mover para outro projeto exige que ele seja do usuário e esteja ativo.
-    const access = await requireOwnedProject(auth.user.id, payload.projectId, {
+    // Mover para outro projeto exige que o projeto seja do dono do post (ou admin usa qualquer projeto seu).
+    const projectOwnerId = auth.user.role === "ADMIN" ? owned.userId : auth.user.id;
+    const access = await requireOwnedProject(projectOwnerId, payload.projectId, {
       allowArchived: payload.projectId === owned.projectId,
     });
     if (!access.ok) return access.response;
@@ -225,9 +232,13 @@ export async function PATCH(
         );
       }
 
+      // ADMIN pode reagendar qualquer post; demais, apenas os próprios.
+      const patchOwnWhere =
+        auth.user.role === "ADMIN" ? { id } : { id, userId: auth.user.id };
+
       const current = await prisma.post.findFirst({
-        where: { id, userId: auth.user.id },
-        select: { projectId: true },
+        where: patchOwnWhere,
+        select: { projectId: true, userId: true },
       });
       if (!current) {
         return NextResponse.json(
@@ -237,7 +248,9 @@ export async function PATCH(
       }
 
       const targetId = record.projectId.trim();
-      const access = await requireOwnedProject(auth.user.id, targetId, {
+      const projOwnerId =
+        auth.user.role === "ADMIN" ? current.userId : auth.user.id;
+      const access = await requireOwnedProject(projOwnerId, targetId, {
         allowArchived: targetId === current.projectId,
       });
       if (!access.ok) return access.response;
@@ -245,8 +258,14 @@ export async function PATCH(
       data.projectId = access.project.id;
     }
 
+    // ADMIN pode reagendar qualquer post.
+    const patchFilter =
+      auth.user.role === "ADMIN"
+        ? { id }
+        : { id, userId: auth.user.id, project: { ownerId: auth.user.id } };
+
     const updated = await prisma.post.updateMany({
-      where: { id, userId: auth.user.id, project: { ownerId: auth.user.id } },
+      where: patchFilter,
       data,
     });
     if (updated.count === 0) {
@@ -257,7 +276,7 @@ export async function PATCH(
     }
 
     const post = await prisma.post.findFirst({
-      where: { id, userId: auth.user.id },
+      where: { id },
       include: postInclude,
     });
     if (!post) {

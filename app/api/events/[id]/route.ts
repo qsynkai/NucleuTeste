@@ -169,7 +169,7 @@ export async function GET(
 
 
 
-  return NextResponse.json(serializeEvent(existing, requestOrigin(request)));
+  return NextResponse.json(serializeEvent(existing, requestOrigin(request), auth.user.id));
 
 }
 
@@ -334,7 +334,7 @@ export async function PATCH(
 
         return NextResponse.json(
 
-          serializeEvent(refreshed, requestOrigin(request)),
+          serializeEvent(refreshed, requestOrigin(request), auth.user.id),
 
         );
 
@@ -374,7 +374,7 @@ export async function PATCH(
 
       });
 
-      return NextResponse.json(serializeEvent(updated, requestOrigin(request)));
+      return NextResponse.json(serializeEvent(updated, requestOrigin(request), auth.user.id));
 
     }
 
@@ -411,7 +411,7 @@ export async function PATCH(
           });
         });
 
-        return NextResponse.json(serializeEvent(updated, origin));
+        return NextResponse.json(serializeEvent(updated, origin, auth.user.id));
       } catch (error: unknown) {
         if (error instanceof Error && error.message.startsWith("INVALID_")) {
           return NextResponse.json({ error: "Serviço ou preço inválido." }, { status: 400 });
@@ -602,7 +602,7 @@ export async function PATCH(
 
 
 
-      return NextResponse.json(serializeEvent(updated, origin));
+      return NextResponse.json(serializeEvent(updated, origin, auth.user.id));
 
     }
 
@@ -764,7 +764,7 @@ export async function PATCH(
 
 
 
-    return NextResponse.json(serializeEvent(updated, origin));
+    return NextResponse.json(serializeEvent(updated, origin, auth.user.id));
 
   } catch (error: unknown) {
 
