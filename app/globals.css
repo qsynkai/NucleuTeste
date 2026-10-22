@@ -99,6 +99,9 @@ html, body {
   font-size: 16px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  /* Força todos os controles nativos (select, scrollbar, date picker) a usarem
+     modo escuro no Chromium/Safari, evitando popups brancos. */
+  color-scheme: dark;
 }
 
 ::selection { background: var(--accent-mid); color: var(--text); }
@@ -706,7 +709,31 @@ a { color: inherit; }
 
 .field__textarea { resize: vertical; min-height: 88px; line-height: 1.55; }
 
-select.field__input { cursor: pointer; }
+select.field__input {
+  cursor: pointer;
+  /* Garante fundo escuro no elemento <select> e nas <option> em todos os browsers */
+  background-color: #181b20;
+  color: var(--text);
+  color-scheme: dark;
+}
+
+select.field__input option {
+  background-color: #181b20;
+  color: var(--text);
+}
+
+select.field__input option:disabled {
+  color: var(--text-3);
+}
+
+/* Selects que não usam .field__input (ex.: admin, participantes) */
+select:not(.field__input) {
+  color-scheme: dark;
+}
+select:not(.field__input) option {
+  background-color: #181b20;
+  color: var(--text);
+}
 
 .field__input[type="datetime-local"]::-webkit-calendar-picker-indicator { filter: invert(0.85); cursor: pointer; }
 
