@@ -31,6 +31,8 @@ export type PostCalendarItem = {
   appointmentStatus: AppointmentStatus | null;
   serviceChannel: ServiceChannel | null;
   tasks: PostCalendarTaskSummary[];
+  /** Você foi convidado e não é o dono do registro. */
+  sharedAsParticipant: boolean;
 };
 
 export type PostsListResponse = {

@@ -30,6 +30,7 @@ function post(overrides: Partial<PostCalendarItem>): PostCalendarItem {
     appointmentStatus: null,
     serviceChannel: null,
     tasks: [],
+    sharedAsParticipant: false,
     ...overrides,
   };
 }

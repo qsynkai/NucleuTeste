@@ -18,6 +18,9 @@ export const postInclude = {
     select: { price: true },
     orderBy: { createdAt: "asc" },
   },
+  participants: {
+    select: { userId: true },
+  },
 } satisfies Prisma.PostInclude;
 
 export type PostWithRelations = Prisma.PostGetPayload<{

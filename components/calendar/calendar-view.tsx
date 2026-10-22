@@ -21,6 +21,7 @@ import {
   filterPostsForCalendar,
 } from "@/lib/calendar/filter-posts";
 import { mapPostsToCalendarEvents } from "@/lib/calendar/map-posts-to-events";
+import { postsForProjectScope } from "@/lib/calendar/posts-for-project-scope";
 import { defaultScheduleDate } from "@/lib/datetime/local-input";
 import { readApiErrorMessage } from "@/lib/api/read-api-error";
 import { fetchWithRetry } from "@/lib/api/fetch-with-retry";
@@ -121,8 +122,7 @@ export function CalendarView() {
   // Seleção de projeto filtra no cliente (troca instantânea); a API só é
   // consultada por projeto quando ele está arquivado (fora da visão global).
   const projectPosts = useMemo(
-    () =>
-      projectId ? allPosts.filter((post) => post.projectId === projectId) : allPosts,
+    () => postsForProjectScope(allPosts, projectId),
     [allPosts, projectId],
   );
 
@@ -131,9 +131,18 @@ export function CalendarView() {
     [projectPosts, filters],
   );
 
-  const events = useMemo(
-    () => mapPostsToCalendarEvents(filteredPosts, { showProject: projectId === null }),
+  const showProjectOnCards = useMemo(
+    () =>
+      projectId === null ||
+      filteredPosts.some(
+        (post) => post.sharedAsParticipant && post.projectId !== projectId,
+      ),
     [filteredPosts, projectId],
+  );
+
+  const events = useMemo(
+    () => mapPostsToCalendarEvents(filteredPosts, { showProject: showProjectOnCards }),
+    [filteredPosts, showProjectOnCards],
   );
 
   const schedulablePostsCount = useMemo(

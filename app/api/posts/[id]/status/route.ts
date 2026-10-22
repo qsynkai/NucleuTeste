@@ -70,7 +70,7 @@ export async function PATCH(
       );
     }
 
-    return NextResponse.json(serializePost(post));
+    return NextResponse.json(serializePost(post, auth.user.id));
   } catch (error: unknown) {
     console.error("[PATCH /api/posts/[id]/status]", error);
     return NextResponse.json(

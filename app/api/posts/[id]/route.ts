@@ -47,7 +47,7 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(serializePost(post));
+    return NextResponse.json(serializePost(post, auth.user.id));
   } catch (error: unknown) {
     console.error("[GET /api/posts/[id]]", error);
     return NextResponse.json(
@@ -147,7 +147,7 @@ export async function PUT(
       return post;
     });
 
-    return NextResponse.json(serializePost(updated));
+    return NextResponse.json(serializePost(updated, auth.user.id));
   } catch (error: unknown) {
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -267,7 +267,7 @@ export async function PATCH(
       );
     }
 
-    return NextResponse.json(serializePost(post));
+    return NextResponse.json(serializePost(post, auth.user.id));
   } catch (error: unknown) {
     console.error("[PATCH /api/posts/[id]]", error);
     return NextResponse.json(

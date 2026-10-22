@@ -117,6 +117,26 @@ async function main() {
   if (!visible) fail("calendário colaborador vê evento convidado", "não listado");
   else pass("calendário colaborador vê evento convidado");
 
+  const invitedFlag = postsCollab.data?.posts?.find((p) => p.id === eventId)
+    ?.sharedAsParticipant;
+  if (invitedFlag !== true) {
+    fail("flag sharedAsParticipant na API", String(invitedFlag));
+  } else pass("flag sharedAsParticipant na API");
+
+  const collabProjects = await api("GET", "/api/projects", collab.cookie);
+  const collabProjectId = collabProjects.data?.projects?.[0]?.id;
+  if (collabProjectId) {
+    const scoped = await api(
+      "GET",
+      `/api/posts?projectId=${encodeURIComponent(collabProjectId)}`,
+      collab.cookie,
+    );
+    const visibleScoped = scoped.data?.posts?.some((p) => p.id === eventId);
+    if (!visibleScoped) {
+      fail("convite visível com filtro de projeto do convidado", "não listado");
+    } else pass("convite visível com filtro de projeto do convidado");
+  }
+
   const getCollab = await api("GET", `/api/events/${eventId}`, collab.cookie);
   if (getCollab.status !== 200) {
     fail("GET evento como participante VIEW", `status ${getCollab.status}`);

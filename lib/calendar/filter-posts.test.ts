@@ -33,6 +33,7 @@ function basePost(entryType: PostCalendarItem["entryType"]): PostCalendarItem {
     appointmentStatus: null,
     serviceChannel: null,
     tasks: [],
+    sharedAsParticipant: false,
   };
 }
 

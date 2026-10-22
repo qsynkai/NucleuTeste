@@ -1,7 +1,15 @@
 import type { PostWithRelations } from "@/lib/posts/post-include";
 import type { PostCalendarItem } from "@/lib/types/post-api";
 
-export function serializePost(post: PostWithRelations): PostCalendarItem {
+export function serializePost(
+  post: PostWithRelations,
+  viewerUserId?: string,
+): PostCalendarItem {
+  const isOwner = viewerUserId ? post.userId === viewerUserId : true;
+  const isParticipant =
+    viewerUserId != null &&
+    post.participants.some((row) => row.userId === viewerUserId);
+
   return {
     id: post.id,
     title: post.title,
@@ -26,5 +34,6 @@ export function serializePost(post: PostWithRelations): PostCalendarItem {
     appointmentStatus: post.appointmentStatus,
     serviceChannel: post.serviceChannel,
     tasks: post.tasks.map((task) => ({ price: task.price.toString() })),
+    sharedAsParticipant: Boolean(viewerUserId) && !isOwner && isParticipant,
   };
 }

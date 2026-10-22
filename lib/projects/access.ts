@@ -45,3 +45,25 @@ export async function requireOwnedProject(
 
   return { ok: true, project };
 }
+
+/** Lista posts de um projeto: dono do projeto ou convidado em algum evento do projeto. */
+export async function canListPostsInProject(
+  userId: string,
+  projectId: string,
+): Promise<boolean> {
+  const owned = await prisma.project.findFirst({
+    where: { id: projectId, ownerId: userId },
+    select: { id: true },
+  });
+  if (owned) return true;
+
+  const invited = await prisma.post.findFirst({
+    where: {
+      projectId,
+      participants: { some: { userId } },
+    },
+    select: { id: true },
+  });
+
+  return Boolean(invited);
+}

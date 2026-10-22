@@ -7,7 +7,7 @@ import { postInclude } from "@/lib/posts/post-include";
 import { serializePost } from "@/lib/posts/serialize-post";
 import { syncEventParticipants } from "@/lib/events/sync-participants";
 import { postsVisibleWhere } from "@/lib/posts/visibility";
-import { requireOwnedProject } from "@/lib/projects/access";
+import { canListPostsInProject, requireOwnedProject } from "@/lib/projects/access";
 import { parseEventParticipantsInput } from "@/lib/validators/event-participants";
 import type { PostCalendarItem, PostsListResponse } from "@/lib/types/post-api";
 import { parsePostPayload } from "@/lib/validators/post-api";
@@ -24,10 +24,13 @@ export async function GET(
 
   try {
     if (projectId) {
-      const access = await requireOwnedProject(auth.user.id, projectId, {
-        allowArchived: true,
-      });
-      if (!access.ok) return access.response;
+      const allowed = await canListPostsInProject(auth.user.id, projectId);
+      if (!allowed) {
+        return NextResponse.json(
+          { error: "Projeto não encontrado." },
+          { status: 404 },
+        );
+      }
     }
 
     const where = postsVisibleWhere(auth.user.id, projectId);
@@ -38,7 +41,9 @@ export async function GET(
       include: postInclude,
     });
 
-    const posts: PostCalendarItem[] = rows.map(serializePost);
+    const posts: PostCalendarItem[] = rows.map((row) =>
+      serializePost(row, auth.user.id),
+    );
 
     return NextResponse.json({ posts });
   } catch (error: unknown) {
@@ -123,7 +128,9 @@ export async function POST(
       return post;
     });
 
-    return NextResponse.json(serializePost(created), { status: 201 });
+    return NextResponse.json(serializePost(created, auth.user.id), {
+      status: 201,
+    });
   } catch (error: unknown) {
     console.error("[POST /api/posts]", error);
     return NextResponse.json(
