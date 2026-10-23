@@ -51,7 +51,7 @@ export async function POST(
     include: eventInclude,
   });
 
-  return NextResponse.json(serializeEvent(updated, requestOrigin(request)));
+  return NextResponse.json(serializeEvent(updated, requestOrigin(request), auth.user.id));
 }
 
 export async function DELETE(
@@ -83,5 +83,5 @@ export async function DELETE(
     include: eventInclude,
   });
 
-  return NextResponse.json(serializeEvent(updated, requestOrigin(request)));
+  return NextResponse.json(serializeEvent(updated, requestOrigin(request), auth.user.id));
 }
